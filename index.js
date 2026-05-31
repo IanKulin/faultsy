@@ -1,4 +1,5 @@
 import express from 'express';
+import './db.js';
 
 const SERVER_URL = process.env.SERVER_URL;
 if (!SERVER_URL) {
