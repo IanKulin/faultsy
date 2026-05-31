@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node --env-file=.env index.js",
     "docker:build": "docker build --platform linux/amd64 -t ghcr.io/iankulin/faultsy .",
     "docker:push": "docker push ghcr.io/iankulin/faultsy"
   },
