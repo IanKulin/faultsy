@@ -11,6 +11,8 @@ const PORT = process.env.PORT ?? 3000;
 
 const app = express();
 
+app.use(express.json());
+
 const SNIPPET = `(function () {
   var SERVER_URL = '{{SERVER_URL}}';
   window.addEventListener('error', function (e) {
@@ -38,6 +40,41 @@ app.get('/faultsy.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'max-age=3600');
   res.send(SNIPPET.replace('{{SERVER_URL}}', process.env.SERVER_URL));
+});
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+app.options('/errors', (req, res) => {
+  res.set(CORS_HEADERS).sendStatus(204);
+});
+
+app.post('/errors', (req, res) => {
+  res.set(CORS_HEADERS);
+
+  const origin = req.headers['origin'];
+  let hostname;
+  try {
+    hostname = new URL(origin).hostname;
+  } catch {
+    return res.sendStatus(403);
+  }
+
+  const site = db.prepare('SELECT hostname, last_seen FROM sites WHERE hostname = ?').get(hostname);
+  if (!site) return res.sendStatus(403);
+
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  if (new Date(site.last_seen) < oneYearAgo) return res.sendStatus(403);
+
+  const { site: siteField, message, url, ts } = req.body ?? {};
+  if (!siteField || !message || !url || !ts) return res.sendStatus(400);
+
+  db.prepare('INSERT INTO errors (site, message, url, ts) VALUES (?, ?, ?, ?)').run(siteField, message, url, ts);
+  res.sendStatus(204);
 });
 
 app.get('/health', (req, res) => {
