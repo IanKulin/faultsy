@@ -1,0 +1,14 @@
+services:
+  faultsy:
+    image: ghcr.io/iankulin/faultsy
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      SERVER_URL: ${SERVER_URL}
+      PORT: 3000
+    volumes:
+      - data:/app/data
+    restart: unless-stopped
+
+volumes:
+  data:
