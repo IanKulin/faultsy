@@ -99,4 +99,20 @@ app.get('/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Faultsy listening on ${SERVER_URL}`);
+
+  const purge = db.transaction(() => {
+    const now = new Date();
+    const cutoff48h = new Date(now - 48 * 60 * 60 * 1000).toISOString();
+    const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
+
+    const { changes: deletedErrors } = db.prepare('DELETE FROM errors WHERE ts < ?').run(cutoff48h);
+    const { changes: deletedSites } = db.prepare('DELETE FROM sites WHERE last_seen < ?').run(cutoff1y);
+
+    if (deletedErrors > 0 || deletedSites > 0) {
+      console.log(`Purge: removed ${deletedErrors} error(s), ${deletedSites} site(s)`);
+    }
+  });
+
+  const timer = setInterval(purge, 60 * 60 * 1000);
+  timer.unref();
 });
