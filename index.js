@@ -30,6 +30,11 @@ const SNIPPET = `(function () {
   window.addEventListener('unhandledrejection', function (e) {
     report(String(e.reason), location.href);
   });
+  window.faultsy = {
+    report: function (err) {
+      report(err instanceof Error ? err.message : String(err));
+    }
+  };
 })();
 `;
 
@@ -53,6 +58,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Private-Network': 'true',
 };
 
 app.options('/errors', (req, res) => {
