@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faultsy Demo</title>
+  <script src="http://127.0.0.1/faultsy.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
+    button { margin-right: 12px; padding: 8px 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Faultsy Demo</h1>
+  <p>Click a button to trigger an error. Check your <code>/health</code> endpoint to see it recorded.</p>
+  <button onclick="setTimeout(() => { throw new Error('Demo uncaught error') }, 0)">Throw uncaught error</button>
+  <button onclick="setTimeout(() => { Promise.reject(new Error('Demo unhandled rejection')) }, 0)">Unhandled rejection</button>
+  <hr/>
+  <button onclick="window.faultsy.report('Demo manual report')">Manual report</button>
+</body>
+</html>
