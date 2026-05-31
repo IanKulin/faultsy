@@ -78,7 +78,23 @@ app.post('/errors', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.sendStatus(200);
+  const now = new Date();
+  const cutoff24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
+
+  const rows = db.prepare(`
+    SELECT s.hostname, COUNT(e.id) AS cnt
+    FROM sites s
+    LEFT JOIN errors e
+      ON e.site = s.hostname
+     AND e.ts >= ?
+    WHERE s.last_seen >= ?
+    GROUP BY s.hostname
+  `).all(cutoff24h, cutoff1y);
+
+  const result = {};
+  for (const row of rows) result[row.hostname] = row.cnt;
+  res.json(result);
 });
 
 app.listen(PORT, () => {
