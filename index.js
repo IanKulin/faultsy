@@ -45,6 +45,16 @@ const healthRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+const errorsRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    try { return new URL(req.headers['origin']).hostname; } catch { return req.ip; }
+  },
+});
+
 app.use(express.json());
 app.use(express.text({ type: 'text/plain' }));
 
@@ -102,7 +112,7 @@ app.options('/errors', (req, res) => {
   res.set(CORS_HEADERS).sendStatus(204);
 });
 
-app.post('/errors', (req, res) => {
+app.post('/errors', errorsRateLimit, (req, res) => {
   res.set(CORS_HEADERS);
 
   const origin = req.headers['origin'];
