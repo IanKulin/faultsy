@@ -17,6 +17,9 @@ db.exec(`
     ts      TEXT NOT NULL
   );
 
+  CREATE INDEX IF NOT EXISTS idx_errors_ts      ON errors (ts);
+  CREATE INDEX IF NOT EXISTS idx_errors_site_ts ON errors (site, ts);
+
   CREATE TABLE IF NOT EXISTS sites (
     hostname  TEXT PRIMARY KEY,
     last_seen TEXT NOT NULL
