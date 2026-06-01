@@ -100,6 +100,9 @@ app.get('/faultsy.js', (req, res) => {
   res.send(SNIPPET.replace('{{SERVER_URL}}', process.env.SERVER_URL));
 });
 
+const MAX_MESSAGE = 2048;
+const MAX_URL = 2048;
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -135,7 +138,8 @@ app.post('/errors', errorsRateLimit, (req, res) => {
     try { body = JSON.parse(body); } catch { return res.sendStatus(400); }
   }
   const { message, url } = body ?? {};
-  if (!message || !url) return res.sendStatus(400);
+  if (typeof message !== 'string' || message.length === 0 || message.length > MAX_MESSAGE) return res.sendStatus(400);
+  if (typeof url !== 'string' || url.length === 0 || url.length > MAX_URL) return res.sendStatus(400);
 
   dbInsertError(hostname, message, url);
   res.sendStatus(204);
