@@ -38,11 +38,15 @@ if (trustProxy && trustProxy !== 'false') {
   app.set('trust proxy', isNaN(trustProxy) ? trustProxy : Number(trustProxy));
 }
 
+const ipKeyGenerator = (ip = '') =>
+  ip.includes(':') ? ip.split(':').slice(0, 4).join(':') : ip;
+
 const healthRateLimit = rateLimit({
   windowMs: 60 * 1000,
   limit: 10,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
 });
 
 const errorsRateLimit = rateLimit({
@@ -51,7 +55,7 @@ const errorsRateLimit = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   keyGenerator: (req) => {
-    try { return new URL(req.headers['origin']).hostname; } catch { return req.ip; }
+    try { return new URL(req.headers['origin']).hostname; } catch { return ipKeyGenerator(req.ip); }
   },
 });
 
