@@ -4,6 +4,9 @@ import { mkdirSync } from 'fs';
 mkdirSync('data', { recursive: true });
 
 const db = new Database('data/faultsy.db');
+db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 5000');
+db.pragma('synchronous = NORMAL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS errors (
