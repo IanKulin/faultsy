@@ -45,8 +45,8 @@ export function dbGetSite(hostname) {
   return stmts.getSite.get(hostname);
 }
 
-export function dbInsertError(site, message, url, ts) {
-  stmts.insertError.run(site, message, url, ts);
+export function dbInsertError(site, message, url) {
+  stmts.insertError.run(site, message, url, new Date().toISOString());
 }
 
 export function dbGetHealthStats() {

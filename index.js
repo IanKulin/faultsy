@@ -64,8 +64,7 @@ const SNIPPET = `(function () {
     navigator.sendBeacon(SERVER_URL + '/errors', JSON.stringify({
       site: location.hostname,
       message: message,
-      url: url || location.href,
-      ts: new Date().toISOString()
+      url: url || location.href
     }));
   }
   window.addEventListener('error', function (e) {
@@ -135,10 +134,10 @@ app.post('/errors', errorsRateLimit, (req, res) => {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { return res.sendStatus(400); }
   }
-  const { message, url, ts } = body ?? {};
-  if (!message || !url || !ts) return res.sendStatus(400);
+  const { message, url } = body ?? {};
+  if (!message || !url) return res.sendStatus(400);
 
-  dbInsertError(hostname, message, url, ts);
+  dbInsertError(hostname, message, url);
   res.sendStatus(204);
 });
 
