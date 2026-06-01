@@ -6,6 +6,7 @@ services:
     environment:
       SERVER_URL: ${SERVER_URL}
       PORT: 3000
+      TRUST_PROXY: false
     volumes:
       - data:/app/data
     restart: unless-stopped
