@@ -126,8 +126,7 @@ app.post('/errors', errorsRateLimit, (req, res) => {
   }
 
   const site = dbGetSite(hostname);
-  if (!site) return res.sendStatus(403);
-  if (!isWhitelisted(hostname)) return res.status(403).type('text/plain').send('Domain not whitelisted');
+  if (!site || !isWhitelisted(hostname)) return res.sendStatus(403);
 
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
