@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData, dbClose } from './db.js';
 
 let whitelist;
 try {
@@ -151,9 +151,19 @@ app.get('/results', healthRateLimit, (req, res) => {
   res.json(result);
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Faultsy listening on ${SERVER_URL}`);
 
   const timer = setInterval(dbPurgeOldData, 60 * 60 * 1000);
   timer.unref();
 });
+
+function shutdown() {
+  server.close(() => {
+    dbClose();
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

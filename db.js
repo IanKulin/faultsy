@@ -74,3 +74,5 @@ export const dbPurgeOldData = db.transaction(() => {
     console.log(`Purge: removed ${deletedErrors} error(s), ${deletedSites} site(s)`);
   }
 });
+
+export function dbClose() { db.close(); }
