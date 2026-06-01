@@ -163,8 +163,10 @@ const server = app.listen(PORT, () => {
 });
 
 function shutdown() {
+  console.log('Shutting down...');
   server.close(() => {
     dbClose();
+    console.log('Goodbye.');
     process.exit(0);
   });
 }
