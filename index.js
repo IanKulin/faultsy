@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
-import db from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData } from './db.js';
 
 let whitelist;
 try {
@@ -80,7 +80,7 @@ app.get('/faultsy.js', (req, res) => {
       if (!isWhitelisted(hostname)) {
         return res.status(403).type('text/plain').send('Domain not whitelisted');
       }
-      db.prepare('INSERT OR REPLACE INTO sites (hostname, last_seen) VALUES (?, ?)').run(hostname, new Date().toISOString());
+      dbUpsertSite(hostname);
     } catch {
       // invalid Referer — skip registration
     }
@@ -113,7 +113,7 @@ app.post('/errors', (req, res) => {
     return res.sendStatus(403);
   }
 
-  const site = db.prepare('SELECT hostname, last_seen FROM sites WHERE hostname = ?').get(hostname);
+  const site = dbGetSite(hostname);
   if (!site) return res.sendStatus(403);
   if (!isWhitelisted(hostname)) return res.status(403).type('text/plain').send('Domain not whitelisted');
 
@@ -128,25 +128,12 @@ app.post('/errors', (req, res) => {
   const { site: siteField, message, url, ts } = body ?? {};
   if (!siteField || !message || !url || !ts) return res.sendStatus(400);
 
-  db.prepare('INSERT INTO errors (site, message, url, ts) VALUES (?, ?, ?, ?)').run(siteField, message, url, ts);
+  dbInsertError(siteField, message, url, ts);
   res.sendStatus(204);
 });
 
 app.get('/health', healthRateLimit, (req, res) => {
-  const now = new Date();
-  const cutoff24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
-  const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
-
-  const rows = db.prepare(`
-    SELECT s.hostname, COUNT(e.id) AS cnt
-    FROM sites s
-    LEFT JOIN errors e
-      ON e.site = s.hostname
-     AND e.ts >= ?
-    WHERE s.last_seen >= ?
-    GROUP BY s.hostname
-  `).all(cutoff24h, cutoff1y);
-
+  const rows = dbGetHealthStats();
   const result = {};
   for (const row of rows) result[row.hostname] = row.cnt;
   res.json(result);
@@ -155,19 +142,6 @@ app.get('/health', healthRateLimit, (req, res) => {
 app.listen(PORT, () => {
   console.log(`Faultsy listening on ${SERVER_URL}`);
 
-  const purge = db.transaction(() => {
-    const now = new Date();
-    const cutoff48h = new Date(now - 48 * 60 * 60 * 1000).toISOString();
-    const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
-
-    const { changes: deletedErrors } = db.prepare('DELETE FROM errors WHERE ts < ?').run(cutoff48h);
-    const { changes: deletedSites } = db.prepare('DELETE FROM sites WHERE last_seen < ?').run(cutoff1y);
-
-    if (deletedErrors > 0 || deletedSites > 0) {
-      console.log(`Purge: removed ${deletedErrors} error(s), ${deletedSites} site(s)`);
-    }
-  });
-
-  const timer = setInterval(purge, 60 * 60 * 1000);
+  const timer = setInterval(dbPurgeOldData, 60 * 60 * 1000);
   timer.unref();
 });

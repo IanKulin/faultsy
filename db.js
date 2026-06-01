@@ -20,4 +20,51 @@ db.exec(`
   );
 `);
 
-export default db;
+const stmts = {
+  upsertSite:       db.prepare('INSERT OR REPLACE INTO sites (hostname, last_seen) VALUES (?, ?)'),
+  getSite:          db.prepare('SELECT hostname, last_seen FROM sites WHERE hostname = ?'),
+  insertError:      db.prepare('INSERT INTO errors (site, message, url, ts) VALUES (?, ?, ?, ?)'),
+  deleteOldErrors:  db.prepare('DELETE FROM errors WHERE ts < ?'),
+  deleteOldSites:   db.prepare('DELETE FROM sites WHERE last_seen < ?'),
+  healthStats:      db.prepare(`
+    SELECT s.hostname, COUNT(e.id) AS cnt
+    FROM sites s
+    LEFT JOIN errors e
+      ON e.site = s.hostname
+     AND e.ts >= ?
+    WHERE s.last_seen >= ?
+    GROUP BY s.hostname
+  `),
+};
+
+export function dbUpsertSite(hostname) {
+  stmts.upsertSite.run(hostname, new Date().toISOString());
+}
+
+export function dbGetSite(hostname) {
+  return stmts.getSite.get(hostname);
+}
+
+export function dbInsertError(site, message, url, ts) {
+  stmts.insertError.run(site, message, url, ts);
+}
+
+export function dbGetHealthStats() {
+  const now = new Date();
+  const cutoff24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
+  return stmts.healthStats.all(cutoff24h, cutoff1y);
+}
+
+export const dbPurgeOldData = db.transaction(() => {
+  const now = new Date();
+  const cutoff48h = new Date(now - 48 * 60 * 60 * 1000).toISOString();
+  const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
+
+  const { changes: deletedErrors } = stmts.deleteOldErrors.run(cutoff48h);
+  const { changes: deletedSites } = stmts.deleteOldSites.run(cutoff1y);
+
+  if (deletedErrors > 0 || deletedSites > 0) {
+    console.log(`Purge: removed ${deletedErrors} error(s), ${deletedSites} site(s)`);
+  }
+});
