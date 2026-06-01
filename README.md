@@ -1,6 +1,6 @@
 # Faultsy
 
-A self-hosted browser error collector. Faultsy catches unhandled JavaScript errors on your websites and exposes them through a `/results` endpoint that uptime monitors like Uptime Kuma can poll — so a spike in JS errors pages you the same way a server outage would.
+A self-hosted browser error collector. Faultsy catches unhandled JavaScript errors on your websites and exposes them through a `/results` endpoint that uptime monitors like Uptime Kuma can poll — so a spike in JS errors alerts you the same way a server outage would.
 
 ## How it works
 
