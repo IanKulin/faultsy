@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import db from './db.js';
 
 let whitelist;
@@ -31,6 +32,18 @@ if (!SERVER_URL) {
 const PORT = process.env.PORT ?? 3000;
 
 const app = express();
+
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy && trustProxy !== 'false') {
+  app.set('trust proxy', isNaN(trustProxy) ? trustProxy : Number(trustProxy));
+}
+
+const healthRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
 
 app.use(express.json());
 app.use(express.text({ type: 'text/plain' }));
@@ -119,7 +132,7 @@ app.post('/errors', (req, res) => {
   res.sendStatus(204);
 });
 
-app.get('/health', (req, res) => {
+app.get('/health', healthRateLimit, (req, res) => {
   const now = new Date();
   const cutoff24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
   const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
