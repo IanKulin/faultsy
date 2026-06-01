@@ -1,5 +1,26 @@
+import { readFileSync } from 'fs';
 import express from 'express';
 import db from './db.js';
+
+let whitelist;
+try {
+  whitelist = JSON.parse(readFileSync('data/whitelist.json', 'utf8'));
+} catch (e) {
+  if (e.code === 'ENOENT') {
+    console.error('Error: data/whitelist.json not found');
+  } else {
+    console.error('Error: data/whitelist.json is not valid JSON:', e.message);
+  }
+  process.exit(1);
+}
+if (!Array.isArray(whitelist) || whitelist.length === 0) {
+  console.error('Error: data/whitelist.json must be a non-empty array');
+  process.exit(1);
+}
+console.log(`Whitelist: ${whitelist.length} domain(s) loaded`);
+
+const whitelistSet = new Set(whitelist.map(d => d.toLowerCase()));
+const isWhitelisted = hostname => whitelistSet.has(hostname.toLowerCase());
 
 const SERVER_URL = process.env.SERVER_URL;
 if (!SERVER_URL) {
@@ -43,6 +64,9 @@ app.get('/faultsy.js', (req, res) => {
   if (referer) {
     try {
       const { hostname } = new URL(referer);
+      if (!isWhitelisted(hostname)) {
+        return res.status(403).type('text/plain').send('Domain not whitelisted');
+      }
       db.prepare('INSERT OR REPLACE INTO sites (hostname, last_seen) VALUES (?, ?)').run(hostname, new Date().toISOString());
     } catch {
       // invalid Referer — skip registration
@@ -78,6 +102,7 @@ app.post('/errors', (req, res) => {
 
   const site = db.prepare('SELECT hostname, last_seen FROM sites WHERE hostname = ?').get(hostname);
   if (!site) return res.sendStatus(403);
+  if (!isWhitelisted(hostname)) return res.status(403).type('text/plain').send('Domain not whitelisted');
 
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
