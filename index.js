@@ -132,7 +132,7 @@ app.post('/errors', (req, res) => {
   res.sendStatus(204);
 });
 
-app.get('/health', healthRateLimit, (req, res) => {
+app.get('/results', healthRateLimit, (req, res) => {
   const rows = dbGetHealthStats();
   const result = {};
   for (const row of rows) result[row.hostname] = row.cnt;

@@ -1,13 +1,13 @@
 # Faultsy
 
-A self-hosted browser error collector. Faultsy catches unhandled JavaScript errors on your websites and exposes them through a `/health` endpoint that uptime monitors like Uptime Kuma can poll — so a spike in JS errors pages you the same way a server outage would.
+A self-hosted browser error collector. Faultsy catches unhandled JavaScript errors on your websites and exposes them through a `/results` endpoint that uptime monitors like Uptime Kuma can poll — so a spike in JS errors pages you the same way a server outage would.
 
 ## How it works
 
 1. You add a `<script>` tag to your site pointing at your Faultsy server.
 2. The script hooks into `window.onerror` and `unhandledrejection`. When either fires, it sends the error to Faultsy via `navigator.sendBeacon`.
 3. Faultsy stores errors in a local SQLite database.
-4. Your uptime monitor polls `/health`, which returns per-site error counts for the last 24 hours. Zero errors = healthy. Any errors = alert.
+4. Your uptime monitor polls `/results`, which returns per-site error counts for the last 24 hours. Zero errors = healthy. Any errors = alert.
 
 Data older than 48 hours is purged automatically. Sites that haven't loaded the script in over a year are removed.
 
@@ -50,7 +50,7 @@ TRUST_PROXY=1
 
 `SERVER_URL` is injected into the client snippet at request time — browsers use it to know where to send errors. It must be the public URL of this server, with no trailing slash.
 
-`TRUST_PROXY` configures Express's `trust proxy` setting for correct IP detection behind a reverse proxy. Set to `1` if there is one proxy in front of Faultsy (the typical case), or a higher number for deeper proxy chains. Omit it (or set to `false`) if Faultsy is exposed directly. Without this, the `/health` rate limiter will see the proxy's IP instead of the real client IP.
+`TRUST_PROXY` configures Express's `trust proxy` setting for correct IP detection behind a reverse proxy. Set to `1` if there is one proxy in front of Faultsy (the typical case), or a higher number for deeper proxy chains. Omit it (or set to `false`) if Faultsy is exposed directly. Without this, the `/results` rate limiter will see the proxy's IP instead of the real client IP.
 
 ### 2. Create the whitelist
 
@@ -92,11 +92,11 @@ Set up a **Keyword** monitor for each site you want to track:
 | Field | Value |
 |---|---|
 | Monitor Type | HTTP(s) - Keyword |
-| URL | `https://your-faultsy-server.com/health` |
+| URL | `https://your-faultsy-server.com/results` |
 | Keyword | `"example.com":0` |
 | Keyword status | `Keyword exists` (default) |
 
-The `/health` endpoint returns JSON like:
+The `/results` endpoint returns JSON like:
 
 ```json
 {"example.com":0,"otherwebsite.com":0}
