@@ -125,10 +125,10 @@ app.post('/errors', (req, res) => {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { return res.sendStatus(400); }
   }
-  const { site: siteField, message, url, ts } = body ?? {};
-  if (!siteField || !message || !url || !ts) return res.sendStatus(400);
+  const { message, url, ts } = body ?? {};
+  if (!message || !url || !ts) return res.sendStatus(400);
 
-  dbInsertError(siteField, message, url, ts);
+  dbInsertError(hostname, message, url, ts);
   res.sendStatus(204);
 });
 
