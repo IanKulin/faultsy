@@ -154,6 +154,7 @@ app.options('/errors', (req, res) => {
 });
 
 app.post('/errors', errorsRateLimit, express.json(), express.text({ type: 'text/plain' }), (req, res) => {
+  const reqId = crypto.randomUUID().slice(0, 8);
   res.set(CORS_HEADERS);
 
   const origin = req.headers['origin'];
@@ -161,40 +162,40 @@ app.post('/errors', errorsRateLimit, express.json(), express.text({ type: 'text/
   try {
     hostname = new URL(origin).hostname;
   } catch {
-    logger.warn('Error POST rejected – invalid Origin header');
+    logger.warn('[%s] Error POST rejected – invalid Origin header', reqId);
     return res.sendStatus(403);
   }
 
   const site = dbGetSite(hostname);
   if (!site || !isWhitelisted(hostname)) {
-    logger.warn('Error POST rejected – unregistered or non-whitelisted hostname: %s', hostname);
+    logger.warn('[%s] Error POST rejected – unregistered or non-whitelisted hostname: %s', reqId, hostname);
     return res.sendStatus(403);
   }
 
   if (site.last_seen < oneYearAgoCutoff()) {
-    logger.warn('Error POST rejected – site inactive: %s', hostname);
+    logger.warn('[%s] Error POST rejected – site inactive: %s', reqId, hostname);
     return res.sendStatus(403);
   }
 
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch {
-      logger.warn('Error POST rejected – invalid JSON body from %s', hostname);
+      logger.warn('[%s] Error POST rejected – invalid JSON body from %s', reqId, hostname);
       return res.sendStatus(400);
     }
   }
   const { message, url } = body ?? {};
   if (typeof message !== 'string' || message.length === 0 || message.length > MAX_MESSAGE) {
-    logger.warn('Error POST rejected – invalid payload from %s', hostname);
+    logger.warn('[%s] Error POST rejected – invalid payload from %s', reqId, hostname);
     return res.sendStatus(400);
   }
   if (typeof url !== 'string' || url.length === 0 || url.length > MAX_URL) {
-    logger.warn('Error POST rejected – invalid payload from %s', hostname);
+    logger.warn('[%s] Error POST rejected – invalid payload from %s', reqId, hostname);
     return res.sendStatus(400);
   }
 
   dbInsertError(hostname, message, url);
-  logger.debug('Error recorded for %s', hostname);
+  logger.debug('[%s] Error recorded for %s', reqId, hostname);
   res.sendStatus(204);
 });
 
