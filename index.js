@@ -229,6 +229,12 @@ const server = app.listen(PORT, () => {
 
 function shutdown() {
   logger.info('Shutting down');
+  const forceExit = setTimeout(() => {
+    logger.error('Shutdown timed out; forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
+
   server.close(() => {
     dbClose();
     logger.info('Goodbye');
