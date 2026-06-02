@@ -58,37 +58,17 @@ if (trustProxy && trustProxy !== 'false') {
 const ipKeyGenerator = (ip = '') =>
   ip.includes(':') ? ip.split(':').slice(0, 4).join(':') : ip;
 
-const rateLimitHandler = (req, res, next, options) => {
-  logger.warn('Rate limit hit: %s', req.ip);
-  res.status(options.statusCode).send(options.message);
-};
-
-const healthRateLimit = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
-  handler: rateLimitHandler,
-});
-
-const errorsRateLimit = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 60,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
-  handler: rateLimitHandler,
-});
-
-const snippetRateLimit = rateLimit({
+app.use(rateLimit({
   windowMs: 60 * 1000,
   limit: 30,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   keyGenerator: (req) => ipKeyGenerator(req.ip),
-  handler: rateLimitHandler,
-});
+  handler: (req, res, next, options) => {
+    logger.warn('Rate limit hit: %s', req.ip);
+    res.status(options.statusCode).send(options.message);
+  },
+}));
 
 
 const SNIPPET = `(function () {
@@ -114,7 +94,7 @@ const SNIPPET = `(function () {
 })();
 `;
 
-app.get('/faultsy.js', snippetRateLimit, (req, res) => {
+app.get('/faultsy.js', (req, res) => {
   const referer = req.headers['referer'];
   if (referer) {
     try {
@@ -153,7 +133,7 @@ app.options('/errors', (req, res) => {
   res.set(CORS_HEADERS).sendStatus(204);
 });
 
-app.post('/errors', errorsRateLimit, express.json(), express.text({ type: 'text/plain' }), (req, res) => {
+app.post('/errors', express.json(), express.text({ type: 'text/plain' }), (req, res) => {
   const reqId = crypto.randomUUID().slice(0, 8);
   res.set(CORS_HEADERS);
 
@@ -199,7 +179,7 @@ app.post('/errors', errorsRateLimit, express.json(), express.text({ type: 'text/
   res.sendStatus(204);
 });
 
-app.get('/results', healthRateLimit, (req, res) => {
+app.get('/results', (req, res) => {
   const rows = dbGetHealthStats();
   const result = {};
   for (const row of rows) result[row.hostname] = row.cnt;
