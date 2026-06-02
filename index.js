@@ -131,6 +131,7 @@ app.get('/faultsy.js', snippetRateLimit, (req, res) => {
 
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.send(SNIPPET.replace('{{SERVER_URL}}', process.env.SERVER_URL));
 });
 
@@ -142,6 +143,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Private-Network': 'true',
+  'Cross-Origin-Resource-Policy': 'cross-origin',
 };
 
 app.options('/errors', (req, res) => {
