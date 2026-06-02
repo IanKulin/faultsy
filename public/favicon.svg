@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <g transform="translate(32,32) scale(1.4) translate(-32,-32)">
+    <!-- Stylised web page -->
+    <rect x="14" y="12" width="36" height="40" rx="5" fill="#F9FAFB"/>
+    <rect x="14" y="12" width="36" height="8" rx="5" fill="#D1D5DB"/>
+    <circle cx="19" cy="16" r="1.5" fill="#EF4444"/>
+    <circle cx="24" cy="16" r="1.5" fill="#F59E0B"/>
+    <circle cx="29" cy="16" r="1.5" fill="#10B981"/>
+
+    <!-- Minimal content lines -->
+    <rect x="20" y="28" width="18" height="3" rx="1.5" fill="#D1D5DB"/>
+    <rect x="20" y="34" width="12" height="3" rx="1.5" fill="#E5E7EB"/>
+
+    <!-- Warning triangle -->
+    <path d="M46 50H22C20.5 50 19.6 48.4 20.4 47.1L32.4 26.5C33.2 25.2 34.8 25.2 35.6 26.5L47.6 47.1C48.4 48.4 47.5 50 46 50Z" fill="#FBBF24"/>
+
+    <!-- Exclamation mark -->
+    <rect x="33" y="33" width="2" height="9" rx="1" fill="#111827"/>
+    <circle cx="34" cy="45" r="1.4" fill="#111827"/>
+  </g>
+</svg>
