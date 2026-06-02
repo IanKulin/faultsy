@@ -227,7 +227,10 @@ const server = app.listen(PORT, () => {
   timer.unref();
 });
 
+let shuttingDown = false;
 function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
   logger.info('Shutting down');
   const forceExit = setTimeout(() => {
     logger.error('Shutdown timed out; forcing exit');
