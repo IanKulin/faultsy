@@ -12,7 +12,7 @@
 </head>
 <body>
   <h1>Faultsy Demo</h1>
-  <p>Click a button to trigger an error. Check your <code>/health</code> endpoint to see it recorded.</p>
+  <p>Click a button to trigger an error. Check your <code>/results</code> endpoint to see it recorded.</p>
   <button onclick="setTimeout(() => { throw new Error('Demo uncaught error') }, 0)">Throw uncaught error</button>
   <button onclick="setTimeout(() => { Promise.reject(new Error('Demo unhandled rejection')) }, 0)">Unhandled rejection</button>
   <hr/>
