@@ -62,6 +62,14 @@ const errorsRateLimit = rateLimit({
   },
 });
 
+const snippetRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
+});
+
 app.use(express.json());
 app.use(express.text({ type: 'text/plain' }));
 
@@ -88,7 +96,7 @@ const SNIPPET = `(function () {
 })();
 `;
 
-app.get('/faultsy.js', (req, res) => {
+app.get('/faultsy.js', snippetRateLimit, (req, res) => {
   const referer = req.headers['referer'];
   if (referer) {
     try {
