@@ -89,8 +89,6 @@ const snippetRateLimit = rateLimit({
   handler: rateLimitHandler,
 });
 
-app.use(express.json());
-app.use(express.text({ type: 'text/plain' }));
 
 const SNIPPET = `(function () {
   var SERVER_URL = {{SERVER_URL}};
@@ -154,7 +152,7 @@ app.options('/errors', (req, res) => {
   res.set(CORS_HEADERS).sendStatus(204);
 });
 
-app.post('/errors', errorsRateLimit, (req, res) => {
+app.post('/errors', errorsRateLimit, express.json(), express.text({ type: 'text/plain' }), (req, res) => {
   res.set(CORS_HEADERS);
 
   const origin = req.headers['origin'];
