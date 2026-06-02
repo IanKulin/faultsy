@@ -208,6 +208,15 @@ app.get('/results', healthRateLimit, (req, res) => {
   res.json(result);
 });
 
+app.use((req, res) => {
+  res.status(404).type('text/plain').send('Not found');
+});
+
+app.use((err, req, res, _next) => {
+  logger.error('Unhandled error: %s', err.message);
+  res.status(500).type('text/plain').send('Internal server error');
+});
+
 const server = app.listen(PORT, () => {
   logger.info('Faultsy listening on %s', SERVER_URL);
 
