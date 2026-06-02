@@ -45,13 +45,14 @@ app.use(helmet());
 
 const trustProxy = process.env.TRUST_PROXY;
 if (trustProxy && trustProxy !== 'false') {
-  const parsed = parseInt(trustProxy, 10);
-  try {
-    app.set('trust proxy', Number.isInteger(parsed) && String(parsed) === trustProxy ? parsed : trustProxy);
-  } catch {
-    console.error(`Invalid TRUST_PROXY value: "${trustProxy}". Use an integer hop count or a string like "loopback".`);
+  const VALID_TRUST_PROXY_STRINGS = new Set(['loopback', 'linklocal', 'uniquelocal']);
+  const asInt = parseInt(trustProxy, 10);
+  const isInt = Number.isInteger(asInt) && String(asInt) === trustProxy;
+  if (!isInt && !VALID_TRUST_PROXY_STRINGS.has(trustProxy)) {
+    logger.error('Invalid TRUST_PROXY value: "%s". Use an integer or loopback/linklocal/uniquelocal.', trustProxy);
     process.exit(1);
   }
+  app.set('trust proxy', isInt ? asInt : trustProxy);
 }
 
 const ipKeyGenerator = (ip = '') =>
