@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import express from 'express';
+import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData, dbClose } from './db.js';
 
@@ -32,6 +33,8 @@ if (!SERVER_URL) {
 const PORT = process.env.PORT ?? 3000;
 
 const app = express();
+
+app.use(helmet());
 
 const trustProxy = process.env.TRUST_PROXY;
 if (trustProxy && trustProxy !== 'false') {
