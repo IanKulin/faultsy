@@ -43,6 +43,10 @@ const stmts = {
   `),
 };
 
+export function oneYearAgoCutoff() {
+  return new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+}
+
 export function dbUpsertSite(hostname) {
   stmts.upsertSite.run(hostname, new Date().toISOString());
 }
@@ -56,16 +60,13 @@ export function dbInsertError(site, message, url) {
 }
 
 export function dbGetHealthStats() {
-  const now = new Date();
-  const cutoff24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
-  const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
-  return stmts.healthStats.all(cutoff24h, cutoff1y);
+  const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  return stmts.healthStats.all(cutoff24h, oneYearAgoCutoff());
 }
 
 export const dbPurgeOldData = db.transaction(() => {
-  const now = new Date();
-  const cutoff48h = new Date(now - 48 * 60 * 60 * 1000).toISOString();
-  const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
+  const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const cutoff1y = oneYearAgoCutoff();
 
   const { changes: errors } = stmts.deleteOldErrors.run(cutoff48h);
   const { changes: sites } = stmts.deleteOldSites.run(cutoff1y);

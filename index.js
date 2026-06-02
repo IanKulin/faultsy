@@ -3,7 +3,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import Logger from '@iankulin/logger';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData, dbClose } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData, dbClose, oneYearAgoCutoff } from './db.js';
 
 const logger = new Logger({
   level: process.env.LOG_LEVEL ?? 'info',
@@ -170,9 +170,7 @@ app.post('/errors', errorsRateLimit, express.json(), express.text({ type: 'text/
     return res.sendStatus(403);
   }
 
-  const oneYearAgo = new Date();
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  if (new Date(site.last_seen) < oneYearAgo) {
+  if (site.last_seen < oneYearAgoCutoff()) {
     logger.warn('Error POST rejected – site inactive: %s', hostname);
     return res.sendStatus(403);
   }
