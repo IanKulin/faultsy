@@ -45,7 +45,13 @@ app.use(helmet());
 
 const trustProxy = process.env.TRUST_PROXY;
 if (trustProxy && trustProxy !== 'false') {
-  app.set('trust proxy', isNaN(trustProxy) ? trustProxy : Number(trustProxy));
+  const parsed = parseInt(trustProxy, 10);
+  try {
+    app.set('trust proxy', Number.isInteger(parsed) && String(parsed) === trustProxy ? parsed : trustProxy);
+  } catch {
+    console.error(`Invalid TRUST_PROXY value: "${trustProxy}". Use an integer hop count or a string like "loopback".`);
+    process.exit(1);
+  }
 }
 
 const ipKeyGenerator = (ip = '') =>
