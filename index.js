@@ -221,8 +221,8 @@ const server = app.listen(PORT, () => {
   logger.info('Faultsy listening on %s', SERVER_URL);
 
   const timer = setInterval(() => {
-    const purged = dbPurgeOldData();
-    logger.debug('Maintenance: purged %d old error(s)', purged);
+    const { errors, sites } = dbPurgeOldData();
+    logger.debug('Maintenance: purged %d error(s), %d site(s)', errors, sites);
   }, 60 * 60 * 1000);
   timer.unref();
 });

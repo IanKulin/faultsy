@@ -67,10 +67,10 @@ export const dbPurgeOldData = db.transaction(() => {
   const cutoff48h = new Date(now - 48 * 60 * 60 * 1000).toISOString();
   const cutoff1y = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
 
-  const { changes: deletedErrors } = stmts.deleteOldErrors.run(cutoff48h);
-  const { changes: deletedSites } = stmts.deleteOldSites.run(cutoff1y);
+  const { changes: errors } = stmts.deleteOldErrors.run(cutoff48h);
+  const { changes: sites } = stmts.deleteOldSites.run(cutoff1y);
 
-  return deletedErrors + deletedSites;
+  return { errors, sites };
 });
 
 export function dbClose() { db.close(); }
