@@ -1,3 +1,5 @@
+process.env.NODE_ENV ||= 'production';
+
 import { readFileSync } from 'fs';
 import express from 'express';
 import helmet from 'helmet';
@@ -26,6 +28,13 @@ if (!Array.isArray(whitelist) || whitelist.length === 0) {
   logger.error('data/whitelist.json must be a non-empty array');
   process.exit(1);
 }
+const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+for (const entry of whitelist) {
+  if (typeof entry !== 'string' || !HOSTNAME_RE.test(entry)) {
+    logger.error('Invalid whitelist entry: %j — must be a plain hostname (e.g. "example.com")', entry);
+    process.exit(1);
+  }
+}
 logger.info('Whitelist loaded: %d domain(s)', whitelist.length);
 
 const whitelistSet = new Set(whitelist.map(d => d.toLowerCase()));
@@ -41,7 +50,10 @@ const PORT = process.env.PORT ?? 3000;
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+app.use(express.static('public'));
+app.get('/favicon.ico', (_req, res) => res.redirect(301, '/favicon.svg'));
 
 const trustProxy = process.env.TRUST_PROXY;
 if (trustProxy && trustProxy !== 'false') {
@@ -114,7 +126,6 @@ app.get('/faultsy.js', (req, res) => {
 
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'max-age=3600');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.send(SNIPPET.replace('{{SERVER_URL}}', JSON.stringify(SERVER_URL)));
 });
 
@@ -126,17 +137,18 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Private-Network': 'true',
-  'Cross-Origin-Resource-Policy': 'cross-origin',
 };
 
 app.options('/errors', (req, res) => {
   res.set(CORS_HEADERS).sendStatus(204);
 });
 
+// route for handling error beacons from faultsy.js
 app.post('/errors', express.json(), express.text({ type: 'text/plain' }), (req, res) => {
   const reqId = crypto.randomUUID().slice(0, 8);
   res.set(CORS_HEADERS);
 
+  // extract the hostname if it's a valid URL
   const origin = req.headers['origin'];
   let hostname;
   try {
@@ -146,17 +158,20 @@ app.post('/errors', express.json(), express.text({ type: 'text/plain' }), (req, 
     return res.sendStatus(403);
   }
 
+  // check it's whitelisted & in the sites table
   const site = dbGetSite(hostname);
   if (!site || !isWhitelisted(hostname)) {
     logger.warn('[%s] Error POST rejected – unregistered or non-whitelisted hostname: %s', reqId, hostname);
     return res.sendStatus(403);
   }
 
+  // has it accessed the faultsy.js in the last year
   if (site.last_seen < oneYearAgoCutoff()) {
     logger.warn('[%s] Error POST rejected – site inactive: %s', reqId, hostname);
     return res.sendStatus(403);
   }
 
+  // extract the error from the request if it's valid
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch {
@@ -174,6 +189,7 @@ app.post('/errors', express.json(), express.text({ type: 'text/plain' }), (req, 
     return res.sendStatus(400);
   }
 
+  // save the error
   dbInsertError(hostname, message, url);
   logger.debug('[%s] Error recorded for %s', reqId, hostname);
   res.sendStatus(204);
