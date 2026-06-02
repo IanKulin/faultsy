@@ -70,9 +70,7 @@ export const dbPurgeOldData = db.transaction(() => {
   const { changes: deletedErrors } = stmts.deleteOldErrors.run(cutoff48h);
   const { changes: deletedSites } = stmts.deleteOldSites.run(cutoff1y);
 
-  if (deletedErrors > 0 || deletedSites > 0) {
-    console.log(`Purge: removed ${deletedErrors} error(s), ${deletedSites} site(s)`);
-  }
+  return deletedErrors + deletedSites;
 });
 
 export function dbClose() { db.close(); }

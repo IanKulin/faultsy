@@ -2,31 +2,38 @@ import { readFileSync } from 'fs';
 import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
+import Logger from '@iankulin/logger';
 import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData, dbClose } from './db.js';
+
+const logger = new Logger({
+  level: process.env.LOG_LEVEL ?? 'info',
+  format: process.env.LOG_FORMAT ?? 'simple',
+  callerLevel: process.env.NODE_ENV === 'production' ? 'error' : 'warn',
+});
 
 let whitelist;
 try {
   whitelist = JSON.parse(readFileSync('data/whitelist.json', 'utf8'));
 } catch (e) {
   if (e.code === 'ENOENT') {
-    console.error('Error: data/whitelist.json not found');
+    logger.error('data/whitelist.json not found');
   } else {
-    console.error('Error: data/whitelist.json is not valid JSON:', e.message);
+    logger.error('data/whitelist.json is not valid JSON: %s', e.message);
   }
   process.exit(1);
 }
 if (!Array.isArray(whitelist) || whitelist.length === 0) {
-  console.error('Error: data/whitelist.json must be a non-empty array');
+  logger.error('data/whitelist.json must be a non-empty array');
   process.exit(1);
 }
-console.log(`Whitelist: ${whitelist.length} domain(s) loaded`);
+logger.info('Whitelist loaded: %d domain(s)', whitelist.length);
 
 const whitelistSet = new Set(whitelist.map(d => d.toLowerCase()));
 const isWhitelisted = hostname => whitelistSet.has(hostname.toLowerCase());
 
 const SERVER_URL = process.env.SERVER_URL;
 if (!SERVER_URL) {
-  console.error('Error: SERVER_URL environment variable is required');
+  logger.error('SERVER_URL environment variable is required');
   process.exit(1);
 }
 
@@ -44,12 +51,18 @@ if (trustProxy && trustProxy !== 'false') {
 const ipKeyGenerator = (ip = '') =>
   ip.includes(':') ? ip.split(':').slice(0, 4).join(':') : ip;
 
+const rateLimitHandler = (req, res, next, options) => {
+  logger.warn('Rate limit hit: %s', req.ip);
+  res.status(options.statusCode).send(options.message);
+};
+
 const healthRateLimit = rateLimit({
   windowMs: 60 * 1000,
   limit: 10,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   keyGenerator: (req) => ipKeyGenerator(req.ip),
+  handler: rateLimitHandler,
 });
 
 const errorsRateLimit = rateLimit({
@@ -60,6 +73,7 @@ const errorsRateLimit = rateLimit({
   keyGenerator: (req) => {
     try { return new URL(req.headers['origin']).hostname; } catch { return ipKeyGenerator(req.ip); }
   },
+  handler: rateLimitHandler,
 });
 
 const snippetRateLimit = rateLimit({
@@ -68,6 +82,7 @@ const snippetRateLimit = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   keyGenerator: (req) => ipKeyGenerator(req.ip),
+  handler: rateLimitHandler,
 });
 
 app.use(express.json());
@@ -102,12 +117,16 @@ app.get('/faultsy.js', snippetRateLimit, (req, res) => {
     try {
       const { hostname } = new URL(referer);
       if (!isWhitelisted(hostname)) {
+        logger.warn('Snippet request rejected – domain not whitelisted: %s', hostname);
         return res.status(403).type('text/plain').send('Domain not whitelisted');
       }
       dbUpsertSite(hostname);
+      logger.debug('Site registered: %s', hostname);
     } catch {
       // invalid Referer — skip registration
     }
+  } else {
+    logger.debug('Snippet served – no Referer');
   }
 
   res.setHeader('Content-Type', 'application/javascript');
@@ -137,25 +156,42 @@ app.post('/errors', errorsRateLimit, (req, res) => {
   try {
     hostname = new URL(origin).hostname;
   } catch {
+    logger.warn('Error POST rejected – invalid Origin header');
     return res.sendStatus(403);
   }
 
   const site = dbGetSite(hostname);
-  if (!site || !isWhitelisted(hostname)) return res.sendStatus(403);
+  if (!site || !isWhitelisted(hostname)) {
+    logger.warn('Error POST rejected – unregistered or non-whitelisted hostname: %s', hostname);
+    return res.sendStatus(403);
+  }
 
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  if (new Date(site.last_seen) < oneYearAgo) return res.sendStatus(403);
+  if (new Date(site.last_seen) < oneYearAgo) {
+    logger.warn('Error POST rejected – site inactive: %s', hostname);
+    return res.sendStatus(403);
+  }
 
   let body = req.body;
   if (typeof body === 'string') {
-    try { body = JSON.parse(body); } catch { return res.sendStatus(400); }
+    try { body = JSON.parse(body); } catch {
+      logger.warn('Error POST rejected – invalid JSON body from %s', hostname);
+      return res.sendStatus(400);
+    }
   }
   const { message, url } = body ?? {};
-  if (typeof message !== 'string' || message.length === 0 || message.length > MAX_MESSAGE) return res.sendStatus(400);
-  if (typeof url !== 'string' || url.length === 0 || url.length > MAX_URL) return res.sendStatus(400);
+  if (typeof message !== 'string' || message.length === 0 || message.length > MAX_MESSAGE) {
+    logger.warn('Error POST rejected – invalid payload from %s', hostname);
+    return res.sendStatus(400);
+  }
+  if (typeof url !== 'string' || url.length === 0 || url.length > MAX_URL) {
+    logger.warn('Error POST rejected – invalid payload from %s', hostname);
+    return res.sendStatus(400);
+  }
 
   dbInsertError(hostname, message, url);
+  logger.debug('Error recorded for %s', hostname);
   res.sendStatus(204);
 });
 
@@ -167,17 +203,20 @@ app.get('/results', healthRateLimit, (req, res) => {
 });
 
 const server = app.listen(PORT, () => {
-  console.log(`Faultsy listening on ${SERVER_URL}`);
+  logger.info('Faultsy listening on %s', SERVER_URL);
 
-  const timer = setInterval(dbPurgeOldData, 60 * 60 * 1000);
+  const timer = setInterval(() => {
+    const purged = dbPurgeOldData();
+    logger.debug('Maintenance: purged %d old error(s)', purged);
+  }, 60 * 60 * 1000);
   timer.unref();
 });
 
 function shutdown() {
-  console.log('Shutting down...');
+  logger.info('Shutting down');
   server.close(() => {
     dbClose();
-    console.log('Goodbye.');
+    logger.info('Goodbye');
     process.exit(0);
   });
 }
