@@ -93,7 +93,7 @@ app.use(express.json());
 app.use(express.text({ type: 'text/plain' }));
 
 const SNIPPET = `(function () {
-  var SERVER_URL = '{{SERVER_URL}}';
+  var SERVER_URL = {{SERVER_URL}};
   function report(message, url) {
     navigator.sendBeacon(SERVER_URL + '/errors', JSON.stringify({
       site: location.hostname,
@@ -136,7 +136,7 @@ app.get('/faultsy.js', snippetRateLimit, (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'max-age=3600');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.send(SNIPPET.replace('{{SERVER_URL}}', SERVER_URL));
+  res.send(SNIPPET.replace('{{SERVER_URL}}', JSON.stringify(SERVER_URL)));
 });
 
 const MAX_MESSAGE = 2048;
