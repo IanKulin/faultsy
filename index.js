@@ -132,7 +132,7 @@ app.get('/faultsy.js', snippetRateLimit, (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'max-age=3600');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.send(SNIPPET.replace('{{SERVER_URL}}', process.env.SERVER_URL));
+  res.send(SNIPPET.replace('{{SERVER_URL}}', SERVER_URL));
 });
 
 const MAX_MESSAGE = 2048;
