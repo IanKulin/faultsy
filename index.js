@@ -76,9 +76,7 @@ const errorsRateLimit = rateLimit({
   limit: 60,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    try { return new URL(req.headers['origin']).hostname; } catch { return ipKeyGenerator(req.ip); }
-  },
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
   handler: rateLimitHandler,
 });
 
