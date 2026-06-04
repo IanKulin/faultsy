@@ -121,7 +121,7 @@ app.get('/faultsy.js', (req, res) => {
       // invalid Referer — skip registration
     }
   } else {
-    logger.debug('Snippet served – no Referer');
+    logger.warn('Snippet served without Referer – site will not be registered');
   }
 
   res.setHeader('Content-Type', 'application/javascript');
