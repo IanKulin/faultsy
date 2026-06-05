@@ -6,6 +6,9 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import Logger from '@iankulin/logger';
 import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff } from './db.js';
+import snippetRouter from './routes/snippet.js';
+import errorsRouter from './routes/errors.js';
+import resultRouter from './routes/result.js';
 
 const logger = new Logger({
   level: process.env.LOG_LEVEL ?? 'info',
@@ -85,144 +88,13 @@ app.use(rateLimit({
   },
 }));
 
+app.use(snippetRouter({ SERVER_URL, isWhitelisted, dbUpsertSite, logger }));
+app.use('/api/errors', errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, logger }));
+app.use('/api/result', resultRouter({ RESULT_TOKEN, dbGetSiteErrorCount, logger }));
 
-const SNIPPET = `(function () {
-  var SERVER_URL = {{SERVER_URL}};
-  function report(message, url) {
-    navigator.sendBeacon(SERVER_URL + '/errors', JSON.stringify({
-      site: location.hostname,
-      message: message,
-      url: url || location.href
-    }));
-  }
-  window.addEventListener('error', function (e) {
-    report(e.message, e.filename);
-  });
-  window.addEventListener('unhandledrejection', function (e) {
-    report(String(e.reason), location.href);
-  });
-  window.faultsy = {
-    report: function (err) {
-      report(err instanceof Error ? err.message : String(err));
-    }
-  };
-})();
-`;
-
-app.get('/faultsy.js', (req, res) => {
-  const referer = req.headers['referer'];
-  if (referer) {
-    try {
-      const { hostname } = new URL(referer);
-      if (!isWhitelisted(hostname)) {
-        logger.warn('Snippet request rejected – domain not whitelisted: %s', hostname);
-        return res.status(403).type('text/plain').send('Domain not whitelisted');
-      }
-      dbUpsertSite(hostname);
-      logger.debug('Site registered: %s', hostname);
-    } catch {
-      // invalid Referer — skip registration
-    }
-  } else {
-    logger.warn('Snippet served without Referer – site will not be registered');
-  }
-
-  res.setHeader('Content-Type', 'application/javascript');
-  res.setHeader('Cache-Control', 'max-age=3600');
-  res.send(SNIPPET.replace('{{SERVER_URL}}', JSON.stringify(SERVER_URL)));
-});
-
-const MAX_MESSAGE = 2048;
-const MAX_URL = 2048;
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Private-Network': 'true',
-};
-
-app.options('/errors', (req, res) => {
-  res.set(CORS_HEADERS).sendStatus(204);
-});
-
-// route for handling error beacons from faultsy.js
-app.post('/errors', express.json(), express.text({ type: 'text/plain' }), (req, res) => {
-  const reqId = crypto.randomUUID().slice(0, 8);
-  res.set(CORS_HEADERS);
-
-  // extract the hostname if it's a valid URL
-  const origin = req.headers['origin'];
-  let hostname;
-  try {
-    hostname = new URL(origin).hostname;
-  } catch {
-    logger.warn('[%s] Error POST rejected – invalid Origin header', reqId);
-    return res.sendStatus(403);
-  }
-
-  // check it's whitelisted & in the sites table
-  const site = dbGetSite(hostname);
-  if (!site || !isWhitelisted(hostname)) {
-    logger.warn('[%s] Error POST rejected – unregistered or non-whitelisted hostname: %s', reqId, hostname);
-    return res.sendStatus(403);
-  }
-
-  // has it accessed the faultsy.js in the last year
-  if (site.last_seen < oneYearAgoCutoff()) {
-    logger.warn('[%s] Error POST rejected – site inactive: %s', reqId, hostname);
-    return res.sendStatus(403);
-  }
-
-  // extract the error from the request if it's valid
-  let body = req.body;
-  if (typeof body === 'string') {
-    try { body = JSON.parse(body); } catch {
-      logger.warn('[%s] Error POST rejected – invalid JSON body from %s', reqId, hostname);
-      return res.sendStatus(400);
-    }
-  }
-  const { message, url } = body ?? {};
-  if (typeof message !== 'string' || message.length === 0 || message.length > MAX_MESSAGE) {
-    logger.warn('[%s] Error POST rejected – invalid payload from %s', reqId, hostname);
-    return res.sendStatus(400);
-  }
-  if (typeof url !== 'string' || url.length === 0 || url.length > MAX_URL) {
-    logger.warn('[%s] Error POST rejected – invalid payload from %s', reqId, hostname);
-    return res.sendStatus(400);
-  }
-
-  // save the error
-  dbInsertError(hostname, message, url);
-  logger.debug('[%s] Error recorded for %s', reqId, hostname);
-  res.sendStatus(204);
-});
-
-const RESULT_CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization',
-};
-
-app.options('/api/result/:hostname', (req, res) => {
-  res.set(RESULT_CORS_HEADERS).sendStatus(204);
-});
-
-app.get('/api/result/:hostname', (req, res) => {
-  res.set(RESULT_CORS_HEADERS);
-
-  const auth = req.headers['authorization'];
-  if (!RESULT_TOKEN || auth !== `Bearer ${RESULT_TOKEN}`) {
-    return res.status(401).json({ status: 'unauthorized' });
-  }
-
-  const { hostname } = req.params;
-  const count = dbGetSiteErrorCount(hostname);
-
-  if (count === null) return res.status(404).json({ status: 'unknown', site: hostname });
-  if (count > 0)      return res.status(503).json({ status: 'errors', site: hostname, count });
-  return res.status(200).json({ status: 'ok', site: hostname });
-});
+// Temporary compat redirects — remove once cached snippets pointing to /errors are unlikely
+app.post('/errors', (req, res) => res.redirect(308, '/api/errors'));
+app.options('/errors', (req, res) => res.redirect(308, '/api/errors'));
 
 app.use((req, res) => {
   res.status(404).type('text/plain').send('Not found');
