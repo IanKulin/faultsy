@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faultsy Result Check</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; }
+    input { width: 100%; box-sizing: border-box; padding: 6px 8px; margin-bottom: 16px; font-size: 1rem; }
+    button { padding: 8px 16px; cursor: pointer; }
+    #result { margin-top: 24px; padding: 12px 16px; border-radius: 6px; display: none; font-size: 0.95rem; }
+    #result.ok  { background: #d4edda; color: #155724; }
+    #result.err { background: #f8d7da; color: #721c24; }
+    #result.unk { background: #fff3cd; color: #856404; }
+    #result.bad { background: #e2e3e5; color: #383d41; }
+    pre { margin: 8px 0 0; font-size: 0.85rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Faultsy Result Check</h1>
+  <p>Calls <code>GET /api/result/:hostname</code> and shows the response.</p>
+
+  <label for="token">RESULT_TOKEN</label>
+  <input id="token" type="text" value="&lt;your secret&gt;" spellcheck="false">
+
+  <label for="hostname">Hostname</label>
+  <input id="hostname" type="text" value="127.0.0.1" spellcheck="false">
+
+  <button onclick="check()">Check</button>
+
+  <div id="result"></div>
+
+  <script>
+    async function check() {
+      const token    = document.getElementById('token').value;
+      const hostname = document.getElementById('hostname').value.trim();
+      const out      = document.getElementById('result');
+
+      out.className = '';
+      out.style.display = 'none';
+
+      let status, body;
+      try {
+        const res = await fetch(`http://127.0.0.1:3000/api/result/${encodeURIComponent(hostname)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        status = res.status;
+        body   = await res.json();
+      } catch (e) {
+        out.className = 'bad';
+        out.style.display = 'block';
+        out.innerHTML = `<strong>Request failed</strong><pre>${e.message}</pre>`;
+        return;
+      }
+
+      const label = { 200: 'ok', 503: 'err', 404: 'unk', 401: 'bad' }[status] ?? 'bad';
+      out.className = label;
+      out.style.display = 'block';
+      out.innerHTML = `<strong>HTTP ${status}</strong><pre>${JSON.stringify(body, null, 2)}</pre>`;
+    }
+  </script>
+</body>
+</html>

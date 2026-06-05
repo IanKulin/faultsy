@@ -105,3 +105,11 @@ The `/results` endpoint returns JSON like:
 The keyword `"example.com":0` is present when there are no errors. When errors are recorded, the count becomes non-zero and the keyword disappears from the response — Uptime Kuma marks the monitor as down and alerts you.
 
 Create one monitor per domain you want to track independently.
+
+## AI Disclosure
+
+AI tools where used in the production of this software
+
+## License
+
+MIT

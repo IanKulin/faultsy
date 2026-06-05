@@ -32,13 +32,13 @@ const stmts = {
   insertError:      db.prepare('INSERT INTO errors (site, message, url, ts) VALUES (?, ?, ?, ?)'),
   deleteOldErrors:  db.prepare('DELETE FROM errors WHERE ts < ?'),
   deleteOldSites:   db.prepare('DELETE FROM sites WHERE last_seen < ?'),
-  healthStats:      db.prepare(`
+  siteErrorCount:   db.prepare(`
     SELECT s.hostname, COUNT(e.id) AS cnt
     FROM sites s
     LEFT JOIN errors e
       ON e.site = s.hostname
      AND e.ts >= ?
-    WHERE s.last_seen >= ?
+    WHERE s.hostname = ?
     GROUP BY s.hostname
   `),
 };
@@ -59,9 +59,10 @@ export function dbInsertError(site, message, url) {
   stmts.insertError.run(site, message, url, new Date().toISOString());
 }
 
-export function dbGetHealthStats() {
+export function dbGetSiteErrorCount(hostname) {
   const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  return stmts.healthStats.all(cutoff24h, oneYearAgoCutoff());
+  const row = stmts.siteErrorCount.get(cutoff24h, hostname);
+  return row ? row.cnt : null;
 }
 
 export const dbPurgeOldData = db.transaction(() => {

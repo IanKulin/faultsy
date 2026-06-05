@@ -5,7 +5,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import Logger from '@iankulin/logger';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetHealthStats, dbPurgeOldData, dbClose, oneYearAgoCutoff } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff } from './db.js';
 
 const logger = new Logger({
   level: process.env.LOG_LEVEL ?? 'info',
@@ -45,6 +45,9 @@ if (!SERVER_URL) {
   logger.error('SERVER_URL environment variable is required');
   process.exit(1);
 }
+
+const RESULT_TOKEN = process.env.RESULT_TOKEN ?? null;
+if (!RESULT_TOKEN) logger.warn('RESULT_TOKEN is not set; /api/result/:hostname will always return 401');
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -195,11 +198,30 @@ app.post('/errors', express.json(), express.text({ type: 'text/plain' }), (req, 
   res.sendStatus(204);
 });
 
-app.get('/results', (req, res) => {
-  const rows = dbGetHealthStats();
-  const result = {};
-  for (const row of rows) result[row.hostname] = row.cnt;
-  res.json(result);
+const RESULT_CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization',
+};
+
+app.options('/api/result/:hostname', (req, res) => {
+  res.set(RESULT_CORS_HEADERS).sendStatus(204);
+});
+
+app.get('/api/result/:hostname', (req, res) => {
+  res.set(RESULT_CORS_HEADERS);
+
+  const auth = req.headers['authorization'];
+  if (!RESULT_TOKEN || auth !== `Bearer ${RESULT_TOKEN}`) {
+    return res.status(401).json({ status: 'unauthorized' });
+  }
+
+  const { hostname } = req.params;
+  const count = dbGetSiteErrorCount(hostname);
+
+  if (count === null) return res.status(404).json({ status: 'unknown', site: hostname });
+  if (count > 0)      return res.status(503).json({ status: 'errors', site: hostname, count });
+  return res.status(200).json({ status: 'ok', site: hostname });
 });
 
 app.use((req, res) => {
