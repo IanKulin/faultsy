@@ -16,9 +16,10 @@ export default function dashboardRouter({ dbGetAllSitesSummary, dbGetLastErrorFo
 
   router.get('/site/:hostname', requireAuth, (req, res) => {
     const { hostname } = req.params;
-    if (!dbGetSite(hostname)) return res.status(404).type('text/plain').send('Not found');
+    const site = dbGetSite(hostname);
+    if (!site) return res.status(404).type('text/plain').send('Not found');
     const errors = dbGetSiteErrors(hostname);
-    res.type('html').send(renderSiteDetail(hostname, errors));
+    res.type('html').send(renderSiteDetail(site, errors));
   });
 
   return router;
@@ -34,13 +35,14 @@ function renderDashboard(sites) {
       <td>${s.error_count}</td>
       <td>${lastErrorHtml}</td>
       <td>${escHtml(formatTs(s.last_seen))}</td>
+      <td>${s.snippet_hits}</td>
     </tr>`;
   }).join('\n');
 
   const tableHtml = sites.length === 0
     ? '<p class="empty">No monitored sites yet.</p>'
     : `<table>
-        <thead><tr><th>Site</th><th>Errors (48h)</th><th>Last Error</th><th>Last Access</th></tr></thead>
+        <thead><tr><th>Site</th><th>Errors (48h)</th><th>Last Error</th><th>Last Access</th><th>Hits</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
 
@@ -55,7 +57,8 @@ function renderDashboard(sites) {
   `);
 }
 
-function renderSiteDetail(hostname, errors) {
+function renderSiteDetail(site, errors) {
+  const { hostname } = site;
   const rows = errors.map(e => `<tr>
     <td>${escHtml(formatTs(e.ts))}</td>
     <td class="truncate" title="${escHtml(e.message)}">${escHtml(e.message)}</td>
@@ -72,6 +75,7 @@ function renderSiteDetail(hostname, errors) {
   return layout(`${hostname} — Faultsy`, `
     <p class="breadcrumb"><a href="/">← Dashboard</a></p>
     <h1>${escHtml(hostname)}</h1>
+    <p class="meta">Last seen: ${escHtml(formatTs(site.last_seen))} &nbsp;·&nbsp; Snippet hits: ${site.snippet_hits}</p>
     ${tableHtml}
   `);
 }

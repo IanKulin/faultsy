@@ -21,14 +21,28 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_errors_site_ts ON errors (site, ts);
 
   CREATE TABLE IF NOT EXISTS sites (
-    hostname  TEXT PRIMARY KEY,
-    last_seen TEXT NOT NULL
+    hostname      TEXT PRIMARY KEY,
+    last_seen     TEXT NOT NULL,
+    snippet_hits  INTEGER NOT NULL DEFAULT 0
   );
 `);
 
+// This can come out after migrating the test db's
+try {
+  db.exec(`ALTER TABLE sites ADD COLUMN snippet_hits INTEGER NOT NULL DEFAULT 0`);
+} catch {
+  // column already exists — safe to ignore
+}
+
 const stmts = {
-  upsertSite:       db.prepare('INSERT OR REPLACE INTO sites (hostname, last_seen) VALUES (?, ?)'),
-  getSite:          db.prepare('SELECT hostname, last_seen FROM sites WHERE hostname = ?'),
+  upsertSite:       db.prepare(`
+    INSERT INTO sites (hostname, last_seen, snippet_hits)
+    VALUES (?, ?, 1)
+    ON CONFLICT(hostname) DO UPDATE SET
+      last_seen    = excluded.last_seen,
+      snippet_hits = snippet_hits + 1
+  `),
+  getSite:          db.prepare('SELECT hostname, last_seen, snippet_hits FROM sites WHERE hostname = ?'),
   insertError:      db.prepare('INSERT INTO errors (site, message, url, ts) VALUES (?, ?, ?, ?)'),
   deleteOldErrors:  db.prepare('DELETE FROM errors WHERE ts < ?'),
   deleteOldSites:   db.prepare('DELETE FROM sites WHERE last_seen < ?'),
@@ -42,7 +56,7 @@ const stmts = {
     GROUP BY s.hostname
   `),
   allSitesSummary:  db.prepare(`
-    SELECT s.hostname, s.last_seen, COUNT(e.id) AS error_count
+    SELECT s.hostname, s.last_seen, s.snippet_hits, COUNT(e.id) AS error_count
     FROM sites s
     LEFT JOIN errors e ON e.site = s.hostname AND e.ts >= ?
     GROUP BY s.hostname
