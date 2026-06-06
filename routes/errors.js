@@ -3,6 +3,15 @@ import express from 'express';
 const MAX_MESSAGE = 2048;
 const MAX_URL = 2048;
 
+function isSafeUrl(url) {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -53,7 +62,7 @@ export default function errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, 
       logger.warn('[%s] Error POST rejected – invalid payload from %s', reqId, hostname);
       return res.sendStatus(400);
     }
-    if (typeof url !== 'string' || url.length === 0 || url.length > MAX_URL) {
+    if (typeof url !== 'string' || url.length === 0 || url.length > MAX_URL || !isSafeUrl(url)) {
       logger.warn('[%s] Error POST rejected – invalid payload from %s', reqId, hostname);
       return res.sendStatus(400);
     }
