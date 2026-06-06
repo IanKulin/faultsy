@@ -3,10 +3,8 @@ services:
     image: ghcr.io/iankulin/faultsy
     ports:
       - "${PORT:-3000}:3000"
-    environment:
-      SERVER_URL: ${SERVER_URL}
-      PORT: 3000
-      TRUST_PROXY: false
+    env_file:
+      - .env
     volumes:
       - data:/app/data
     restart: unless-stopped

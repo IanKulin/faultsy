@@ -7,6 +7,8 @@ RUN npm ci --omit=dev
 
 COPY index.js db.js ./
 COPY routes/ routes/
+COPY middleware/ middleware/
+COPY views/ views/
 COPY public/ public/
 
 EXPOSE 3000

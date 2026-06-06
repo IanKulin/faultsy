@@ -41,6 +41,15 @@ const stmts = {
     WHERE s.hostname = ?
     GROUP BY s.hostname
   `),
+  allSitesSummary:  db.prepare(`
+    SELECT s.hostname, s.last_seen, COUNT(e.id) AS error_count
+    FROM sites s
+    LEFT JOIN errors e ON e.site = s.hostname AND e.ts >= ?
+    GROUP BY s.hostname
+    ORDER BY s.hostname
+  `),
+  lastErrorForSite: db.prepare('SELECT message, ts FROM errors WHERE site = ? ORDER BY ts DESC LIMIT 1'),
+  siteErrors:       db.prepare('SELECT message, url, ts FROM errors WHERE site = ? ORDER BY ts DESC LIMIT 100'),
 };
 
 export function oneYearAgoCutoff() {
@@ -74,5 +83,18 @@ export const dbPurgeOldData = db.transaction(() => {
 
   return { errors, sites };
 });
+
+export function dbGetAllSitesSummary() {
+  const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  return stmts.allSitesSummary.all(cutoff48h);
+}
+
+export function dbGetLastErrorForSite(hostname) {
+  return stmts.lastErrorForSite.get(hostname);
+}
+
+export function dbGetSiteErrors(hostname) {
+  return stmts.siteErrors.all(hostname);
+}
 
 export function dbClose() { db.close(); }

@@ -4,11 +4,14 @@ import { readFileSync } from 'fs';
 import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
+import session from 'express-session';
 import Logger from '@iankulin/logger';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetLastErrorForSite, dbGetSiteErrors } from './db.js';
 import snippetRouter from './routes/snippet.js';
 import errorsRouter from './routes/errors.js';
 import resultRouter from './routes/result.js';
+import authRouter from './routes/auth.js';
+import dashboardRouter from './routes/dashboard.js';
 
 const logger = new Logger({
   level: process.env.LOG_LEVEL ?? 'info',
@@ -52,6 +55,21 @@ if (!SERVER_URL) {
 const RESULT_TOKEN = process.env.RESULT_TOKEN ?? null;
 if (!RESULT_TOKEN) logger.warn('RESULT_TOKEN is not set; /api/result/:hostname will always return 401');
 
+const DASHBOARD_SESSION_SECRET = process.env.DASHBOARD_SESSION_SECRET;
+if (!DASHBOARD_SESSION_SECRET) {
+  logger.error('DASHBOARD_SESSION_SECRET environment variable is required');
+  process.exit(1);
+}
+
+const DASHBOARD_PASSWORD_HASH = process.env.DASHBOARD_PASSWORD_HASH;
+if (!DASHBOARD_PASSWORD_HASH) {
+  logger.error('DASHBOARD_PASSWORD_HASH environment variable is required');
+  process.exit(1);
+}
+
+const DASHBOARD_USER = process.env.DASHBOARD_USER || 'admin';
+if (!process.env.DASHBOARD_USER) logger.warn('DASHBOARD_USER is not set; defaulting to "admin"');
+
 const PORT = process.env.PORT ?? 3000;
 
 const app = express();
@@ -88,6 +106,22 @@ app.use(rateLimit({
   },
 }));
 
+app.use(express.urlencoded({ extended: false }));
+
+app.use(session({
+  secret: DASHBOARD_SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: SERVER_URL.startsWith('https://'),
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
+  },
+}));
+
+app.use(authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH }));
+app.use(dashboardRouter({ dbGetAllSitesSummary, dbGetLastErrorForSite, dbGetSiteErrors, dbGetSite }));
 app.use(snippetRouter({ SERVER_URL, isWhitelisted, dbUpsertSite, logger }));
 app.use('/api/errors', errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, logger }));
 app.use('/api/result', resultRouter({ RESULT_TOKEN, dbGetSiteErrorCount, logger }));
