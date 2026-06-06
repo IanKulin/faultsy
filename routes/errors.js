@@ -3,7 +3,7 @@ import express from 'express';
 const MAX_MESSAGE = 2048;
 const MAX_URL = 2048;
 
-function isSafeUrl(url) {
+export function isSafeUrl(url) {
   try {
     const { protocol } = new URL(url);
     return protocol === 'http:' || protocol === 'https:';

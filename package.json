@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node --env-file=.env index.js",
+    "test": "node --test test/*.test.js",
     "docker:build": "docker build --platform linux/amd64 -t ghcr.io/iankulin/faultsy .",
     "docker:push": "docker push ghcr.io/iankulin/faultsy"
   },
