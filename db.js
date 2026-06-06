@@ -27,13 +27,6 @@ db.exec(`
   );
 `);
 
-// This can come out after migrating the test db's
-try {
-  db.exec(`ALTER TABLE sites ADD COLUMN snippet_hits INTEGER NOT NULL DEFAULT 0`);
-} catch {
-  // column already exists — safe to ignore
-}
-
 const stmts = {
   upsertSite:       db.prepare(`
     INSERT INTO sites (hostname, last_seen, snippet_hits)
