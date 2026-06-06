@@ -15,8 +15,12 @@ export default function authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH }) 
     const usernameMatch = username.toLowerCase() === DASHBOARD_USER.toLowerCase();
     const passwordMatch = await bcrypt.compare(password, DASHBOARD_PASSWORD_HASH);
     if (usernameMatch && passwordMatch) {
-      req.session.authenticated = true;
-      return res.redirect('/');
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).type('text/plain').send('Internal server error');
+        req.session.authenticated = true;
+        res.redirect('/');
+      });
+      return;
     }
     res.type('html').send(renderLogin('Invalid credentials'));
   });
