@@ -19,19 +19,20 @@ const logger = new Logger({
   callerLevel: process.env.NODE_ENV === 'production' ? 'error' : 'warn',
 });
 
+const WHITELIST_PATH = process.env.WHITELIST_PATH ?? 'data/whitelist.json';
 let whitelist;
 try {
-  whitelist = JSON.parse(readFileSync('data/whitelist.json', 'utf8'));
+  whitelist = JSON.parse(readFileSync(WHITELIST_PATH, 'utf8'));
 } catch (e) {
   if (e.code === 'ENOENT') {
-    logger.error('data/whitelist.json not found');
+    logger.error('%s not found', WHITELIST_PATH);
   } else {
-    logger.error('data/whitelist.json is not valid JSON: %s', e.message);
+    logger.error('%s is not valid JSON: %s', WHITELIST_PATH, e.message);
   }
   process.exit(1);
 }
 if (!Array.isArray(whitelist) || whitelist.length === 0) {
-  logger.error('data/whitelist.json must be a non-empty array');
+  logger.error('%s must be a non-empty array', WHITELIST_PATH);
   process.exit(1);
 }
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
@@ -97,6 +98,7 @@ const ipKeyGenerator = (ip = '') =>
 app.use(rateLimit({
   windowMs: 60 * 1000,
   limit: 30,
+  skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   keyGenerator: (req) => ipKeyGenerator(req.ip),

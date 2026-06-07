@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node --env-file=.env index.js",
     "test": "node --test test/*.test.js",
+    "test:e2e": "playwright test",
     "docker:build": "docker build --platform linux/amd64 -t ghcr.io/iankulin/faultsy .",
     "docker:push": "docker push ghcr.io/iankulin/faultsy"
   },
@@ -17,5 +18,8 @@
     "express-rate-limit": "^8.5.2",
     "express-session": "^1.19.0",
     "helmet": "^8.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
   }
 }
