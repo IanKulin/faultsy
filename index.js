@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
 import Logger from '@iankulin/logger';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetLastErrorForSite, dbGetSiteErrors } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors } from './db.js';
 import snippetRouter from './routes/snippet.js';
 import errorsRouter from './routes/errors.js';
 import resultRouter from './routes/result.js';
@@ -123,7 +123,7 @@ app.use(session({
 }));
 
 app.use(authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH }));
-app.use(dashboardRouter({ dbGetAllSitesSummary, dbGetLastErrorForSite, dbGetSiteErrors, dbGetSite }));
+app.use(dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite }));
 app.use(snippetRouter({ SERVER_URL, isWhitelisted, dbUpsertSite, logger }));
 app.use('/api/errors', errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, logger }));
 app.use('/api/result', resultRouter({ RESULT_TOKEN, dbGetSiteErrorCount, logger }));

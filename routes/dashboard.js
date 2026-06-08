@@ -2,16 +2,12 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { layout, escHtml } from '../views/layout.js';
 
-export default function dashboardRouter({ dbGetAllSitesSummary, dbGetLastErrorForSite, dbGetSiteErrors, dbGetSite }) {
+export default function dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite }) {
   const router = Router();
 
   router.get('/', requireAuth, async (req, res) => {
     const sites = dbGetAllSitesSummary();
-    const withLastError = sites.map(site => ({
-      ...site,
-      lastError: dbGetLastErrorForSite(site.hostname),
-    }));
-    res.type('html').send(renderDashboard(withLastError));
+    res.type('html').send(renderDashboard(sites));
   });
 
   router.get('/site/:hostname', requireAuth, (req, res) => {
@@ -27,8 +23,8 @@ export default function dashboardRouter({ dbGetAllSitesSummary, dbGetLastErrorFo
 
 function renderDashboard(sites) {
   const rows = sites.map(s => {
-    const lastErrorHtml = s.lastError
-      ? `${escHtml(s.lastError.message.slice(0, 80))}${s.lastError.message.length > 80 ? '…' : ''}<br><small>${escHtml(formatTs(s.lastError.ts))}</small>`
+    const lastErrorHtml = s.last_error_message
+      ? `${escHtml(s.last_error_message.slice(0, 80))}${s.last_error_message.length > 80 ? '…' : ''}<br><small>${escHtml(formatTs(s.last_error_ts))}</small>`
       : '';
     return `<tr>
       <td><a href="/site/${escHtml(s.hostname)}">${escHtml(s.hostname)}</a></td>

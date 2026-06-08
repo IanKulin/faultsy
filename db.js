@@ -51,13 +51,25 @@ const stmts = {
     GROUP BY s.hostname
   `),
   allSitesSummary:  db.prepare(`
-    SELECT s.hostname, s.last_seen, s.snippet_hits, COUNT(e.id) AS error_count
+    SELECT
+      s.hostname,
+      s.last_seen,
+      s.snippet_hits,
+      COUNT(e.id) AS error_count,
+      last_err.message AS last_error_message,
+      last_err.ts      AS last_error_ts
     FROM sites s
-    LEFT JOIN errors e ON e.site = s.hostname AND e.ts >= ?
+    LEFT JOIN errors e
+      ON e.site = s.hostname AND e.ts >= ?
+    LEFT JOIN (
+      SELECT site, message, ts,
+             ROW_NUMBER() OVER (PARTITION BY site ORDER BY ts DESC) AS rn
+      FROM errors
+    ) last_err
+      ON last_err.site = s.hostname AND last_err.rn = 1
     GROUP BY s.hostname
     ORDER BY s.hostname
   `),
-  lastErrorForSite: db.prepare('SELECT message, ts FROM errors WHERE site = ? ORDER BY ts DESC LIMIT 1'),
   siteErrors:       db.prepare('SELECT message, url, ts FROM errors WHERE site = ? ORDER BY ts DESC LIMIT 100'),
 };
 
@@ -96,10 +108,6 @@ export const dbPurgeOldData = db.transaction(() => {
 export function dbGetAllSitesSummary() {
   const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
   return stmts.allSitesSummary.all(cutoff48h);
-}
-
-export function dbGetLastErrorForSite(hostname) {
-  return stmts.lastErrorForSite.get(hostname);
 }
 
 export function dbGetSiteErrors(hostname) {
