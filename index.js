@@ -78,9 +78,6 @@ const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-app.use(express.static('public'));
-app.get('/favicon.ico', (_req, res) => res.redirect(301, '/favicon.svg'));
-
 const trustProxy = process.env.TRUST_PROXY;
 if (trustProxy && trustProxy !== 'false') {
   const VALID_TRUST_PROXY_STRINGS = new Set(['loopback', 'linklocal', 'uniquelocal']);
@@ -108,6 +105,9 @@ app.use(rateLimit({
     res.status(options.statusCode).send(options.message);
   },
 }));
+
+app.use(express.static('public'));
+app.get('/favicon.ico', (_req, res) => res.redirect(301, '/favicon.svg'));
 
 app.use(express.urlencoded({ extended: false }));
 
