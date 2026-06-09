@@ -2,15 +2,16 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { layout, escHtml } from '../views/layout.js';
 
-export default function authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH }) {
+export default function authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH, csrf }) {
   const router = Router();
 
-  router.get('/login', (req, res) => {
+  router.get('/login', csrf, (req, res) => {
     if (req.session.authenticated) return res.redirect('/');
-    res.type('html').send(renderLogin());
+    req.session.csrfInit = true; // force session save so connect.sid is stable for CSRF binding
+    res.type('html').send(renderLogin(null, req.csrfToken()));
   });
 
-  router.post('/login', async (req, res) => {
+  router.post('/login', csrf, async (req, res) => {
     const { username = '', password = '' } = req.body;
     const usernameMatch = username.toLowerCase() === DASHBOARD_USER.toLowerCase();
     const passwordMatch = await bcrypt.compare(password, DASHBOARD_PASSWORD_HASH);
@@ -22,17 +23,17 @@ export default function authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH }) 
       });
       return;
     }
-    res.type('html').send(renderLogin('Invalid credentials'));
+    res.type('html').send(renderLogin('Invalid credentials', req.csrfToken()));
   });
 
-  router.post('/logout', (req, res) => {
+  router.post('/logout', csrf, (req, res) => {
     req.session.destroy(() => res.redirect('/login'));
   });
 
   return router;
 }
 
-function renderLogin(errorMsg) {
+function renderLogin(errorMsg, csrfToken) {
   const errorHtml = errorMsg
     ? `<p class="error-msg">${escHtml(errorMsg)}</p>`
     : '';
@@ -41,6 +42,7 @@ function renderLogin(errorMsg) {
       <h1>Faultsy</h1>
       ${errorHtml}
       <form method="POST" action="/login">
+        <input type="hidden" name="_csrf" value="${escHtml(csrfToken)}">
         <div class="field">
           <label for="username">Username</label>
           <input type="text" id="username" name="username" autocomplete="username" required>

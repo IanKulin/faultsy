@@ -5,6 +5,8 @@ import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
+import cookieParser from 'cookie-parser';
+import csrfProtection from 'small-csrf';
 import Logger from '@iankulin/logger';
 import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors } from './db.js';
 import { SqliteSessionStore } from './session-store.js';
@@ -128,8 +130,12 @@ app.use(session({
   },
 }));
 
-app.use(authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH }));
-app.use(dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite }));
+app.use(cookieParser());
+
+const csrf = csrfProtection({ secret: DASHBOARD_SESSION_SECRET });
+
+app.use(authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH, csrf }));
+app.use(dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite, csrf }));
 app.use(snippetRouter({ SERVER_URL, isWhitelisted, dbUpsertSite, logger }));
 app.use('/api/errors', errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, logger }));
 app.use('/api/result', resultRouter({ RESULT_TOKEN, dbGetSiteErrorCount, logger }));
@@ -140,6 +146,11 @@ app.options('/errors', (req, res) => res.redirect(308, '/api/errors'));
 
 app.use((req, res) => {
   res.status(404).type('text/plain').send('Not found');
+});
+
+app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') return res.status(403).type('text/plain').send('Bad request');
+  next(err);
 });
 
 app.use((err, req, res, _next) => {

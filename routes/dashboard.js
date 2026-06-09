@@ -2,15 +2,15 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { layout, escHtml } from '../views/layout.js';
 
-export default function dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite }) {
+export default function dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite, csrf }) {
   const router = Router();
 
-  router.get('/', requireAuth, async (req, res) => {
+  router.get('/', requireAuth, csrf, async (req, res) => {
     const sites = dbGetAllSitesSummary();
-    res.type('html').send(renderDashboard(sites));
+    res.type('html').send(renderDashboard(sites, req.csrfToken()));
   });
 
-  router.get('/site/:hostname', requireAuth, (req, res) => {
+  router.get('/site/:hostname', requireAuth, csrf, (req, res) => {
     const { hostname } = req.params;
     const site = dbGetSite(hostname);
     if (!site) return res.status(404).type('text/plain').send('Not found');
@@ -21,7 +21,7 @@ export default function dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors,
   return router;
 }
 
-function renderDashboard(sites) {
+function renderDashboard(sites, csrfToken) {
   const rows = sites.map(s => {
     const lastErrorHtml = s.last_error_message
       ? `${escHtml(s.last_error_message.slice(0, 80))}${s.last_error_message.length > 80 ? '…' : ''}<br><small>${escHtml(formatTs(s.last_error_ts))}</small>`
@@ -46,6 +46,7 @@ function renderDashboard(sites) {
     <div class="top-bar">
       <h1>Faultsy</h1>
       <form class="inline" method="POST" action="/logout">
+        <input type="hidden" name="_csrf" value="${escHtml(csrfToken)}">
         <button class="logout" type="submit">Logout</button>
       </form>
     </div>
