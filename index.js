@@ -7,6 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
 import Logger from '@iankulin/logger';
 import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors } from './db.js';
+import { SqliteSessionStore } from './session-store.js';
 import snippetRouter from './routes/snippet.js';
 import errorsRouter from './routes/errors.js';
 import resultRouter from './routes/result.js';
@@ -110,10 +111,15 @@ app.use(rateLimit({
 
 app.use(express.urlencoded({ extended: false }));
 
+const sessionStore = new SqliteSessionStore({
+  path: process.env.SESSION_DB_PATH ?? 'data/sessions.db',
+});
+
 app.use(session({
   secret: DASHBOARD_SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: sessionStore,
   cookie: {
     httpOnly: true,
     secure: SERVER_URL.startsWith('https://'),
@@ -167,6 +173,7 @@ function shutdown() {
   forceExit.unref();
 
   server.close(() => {
+    sessionStore.close();
     dbClose();
     logger.info('Goodbye');
     process.exit(0);
