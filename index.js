@@ -10,7 +10,7 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import csrfProtection from 'small-csrf';
 import Logger from '@iankulin/logger';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors, dbHealthCheck } from './db.js';
 import { SqliteSessionStore } from './session-store.js';
 import snippetRouter from './routes/snippet.js';
 import errorsRouter from './routes/errors.js';
@@ -111,6 +111,16 @@ app.use(rateLimit({
     res.status(options.statusCode).send(options.message);
   },
 }));
+
+app.get('/health', (req, res) => {
+  try {
+    dbHealthCheck();
+    res.status(200).type('text/plain').send('ok');
+  } catch (err) {
+    logger.error('Health check failed: %s', err.message);
+    res.status(503).type('text/plain').send('unavailable');
+  }
+});
 
 app.use(express.static('public'));
 app.get('/favicon.ico', (_req, res) => res.redirect(301, '/favicon.svg'));

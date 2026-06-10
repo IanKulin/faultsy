@@ -74,6 +74,7 @@ const stmts = {
     ORDER BY s.hostname
   `),
   siteErrors:       db.prepare('SELECT message, url, ts FROM errors WHERE site = ? ORDER BY ts DESC LIMIT 100'),
+  ping:             db.prepare('SELECT 1'),
 };
 
 export function oneYearAgoCutoff() {
@@ -116,5 +117,7 @@ export function dbGetAllSitesSummary() {
 export function dbGetSiteErrors(hostname) {
   return stmts.siteErrors.all(hostname);
 }
+
+export function dbHealthCheck() { stmts.ping.get(); }
 
 export function dbClose() { db.close(); }

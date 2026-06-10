@@ -8,6 +8,11 @@ services:
     volumes:
       - data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   data:
