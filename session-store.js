@@ -1,12 +1,15 @@
 import Database from 'better-sqlite3';
 import { Store } from 'express-session';
 import { mkdirSync } from 'fs';
-import { dirname } from 'node:path';
+import { fileURLToPath } from 'url';
+import { join, dirname } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export class SqliteSessionStore extends Store {
   constructor(options = {}) {
     super();
-    const path = options.path ?? 'data/sessions.db';
+    const path = options.path ?? join(__dirname, 'data', 'sessions.db');
     mkdirSync(dirname(path), { recursive: true });
     this.db = new Database(path);
     this.db.pragma('journal_mode = WAL');

@@ -1,8 +1,11 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
-import { dirname } from 'node:path';
+import { fileURLToPath } from 'url';
+import { join, dirname } from 'node:path';
 
-const DB_PATH = process.env.DB_PATH ?? 'data/faultsy.db';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const DB_PATH = process.env.DB_PATH ?? join(__dirname, 'data', 'faultsy.db');
 mkdirSync(dirname(DB_PATH), { recursive: true });
 
 const db = new Database(DB_PATH);

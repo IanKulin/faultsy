@@ -1,6 +1,8 @@
 process.env.NODE_ENV ||= 'production';
 
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { join, dirname } from 'path';
 import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
@@ -16,13 +18,15 @@ import resultRouter from './routes/result.js';
 import authRouter from './routes/auth.js';
 import dashboardRouter from './routes/dashboard.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const logger = new Logger({
   level: process.env.LOG_LEVEL ?? 'info',
   format: process.env.LOG_FORMAT ?? 'simple',
   callerLevel: process.env.NODE_ENV === 'production' ? 'error' : 'warn',
 });
 
-const WHITELIST_PATH = process.env.WHITELIST_PATH ?? 'data/whitelist.json';
+const WHITELIST_PATH = process.env.WHITELIST_PATH ?? join(__dirname, 'data', 'whitelist.json');
 let whitelist;
 try {
   whitelist = JSON.parse(readFileSync(WHITELIST_PATH, 'utf8'));
@@ -114,7 +118,7 @@ app.get('/favicon.ico', (_req, res) => res.redirect(301, '/favicon.svg'));
 app.use(express.urlencoded({ extended: false }));
 
 const sessionStore = new SqliteSessionStore({
-  path: process.env.SESSION_DB_PATH ?? 'data/sessions.db',
+  path: process.env.SESSION_DB_PATH ?? join(__dirname, 'data', 'sessions.db'),
 });
 
 app.use(session({
