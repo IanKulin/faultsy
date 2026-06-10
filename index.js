@@ -69,7 +69,7 @@ if (!DASHBOARD_SESSION_SECRET) {
   process.exit(1);
 }
 
-const DASHBOARD_PASSWORD_HASH = process.env.DASHBOARD_PASSWORD_HASH;
+const DASHBOARD_PASSWORD_HASH = process.env.DASHBOARD_PASSWORD_HASH?.replace(/\$\$/g, '$');
 if (!DASHBOARD_PASSWORD_HASH) {
   logger.error('DASHBOARD_PASSWORD_HASH environment variable is required');
   process.exit(1);

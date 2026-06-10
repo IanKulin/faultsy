@@ -47,6 +47,9 @@ SERVER_URL=https://your-faultsy-server.com
 PORT=3000
 TRUST_PROXY=1
 RESULT_TOKEN=a-long-random-secret
+DASHBOARD_SESSION_SECRET=a-long-random-secret
+DASHBOARD_PASSWORD_HASH=$$2b$$10$$...
+DASHBOARD_USER=admin
 ```
 
 `SERVER_URL` is injected into the client snippet at request time — browsers use it to know where to send errors. It must be the public URL of this server, with no trailing slash.
@@ -54,6 +57,18 @@ RESULT_TOKEN=a-long-random-secret
 `TRUST_PROXY` configures Express's `trust proxy` setting for correct IP detection behind a reverse proxy. Set to `1` if there is one proxy in front of Faultsy (the typical case), or a higher number for deeper proxy chains. Omit it (or set to `false`) if Faultsy is exposed directly.
 
 `RESULT_TOKEN` is the shared secret that uptime monitors must supply as `Authorization: Bearer <token>` when polling `/api/result/:hostname`. Set it to a long random string and keep it private.
+
+`DASHBOARD_SESSION_SECRET` signs the session cookie. Generate a random value with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+`DASHBOARD_PASSWORD_HASH` is a bcrypt hash of your dashboard password. Generate one with the Docker Safe option at [https://iankulin.github.io/crypt/](https://iankulin.github.io/crypt/).
+
+**Important:** bcrypt hashes contain `$` characters. In `.env` files and Docker Compose env files, escape every `$` as `$$` (e.g. `$2b$10$...` becomes `$$2b$$10$$...`). Faultsy converts them back automatically at startup.
+
+`DASHBOARD_USER` is the dashboard login username. Defaults to `admin` if not set.
 
 ### 2. Create the whitelist
 
