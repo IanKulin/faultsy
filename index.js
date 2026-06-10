@@ -26,7 +26,7 @@ const logger = new Logger({
   callerLevel: process.env.NODE_ENV === 'production' ? 'error' : 'warn',
 });
 
-const WHITELIST_PATH = process.env.WHITELIST_PATH ?? join(__dirname, 'data', 'whitelist.json');
+const WHITELIST_PATH = process.env.WHITELIST_PATH ?? 'data/whitelist.json';
 let whitelist;
 try {
   whitelist = JSON.parse(readFileSync(WHITELIST_PATH, 'utf8'));
