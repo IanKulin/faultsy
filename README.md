@@ -72,13 +72,15 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### 2. Create the whitelist
 
-Create `data/whitelist.json` before starting the server. This controls which domains are allowed to register and submit errors:
+Create `data/whitelist.json` before starting the server for the first time. This seeds the initial set of domains that are allowed to register and submit errors:
 
 ```json
 ["example.com", "otherwebsite.com"]
 ```
 
 The `data/` directory sits next to `docker-compose.yaml`. The database file (`faultsy.db`) is also stored there and is persisted via a Docker volume.
+
+Once the server has started, the whitelist is stored in the database and can be managed from the dashboard at `/whitelist`. You can add or remove domains there without editing any files. The `data/whitelist.json` file is only read once, on first startup, when the database whitelist is empty.
 
 ### 3. Start the server
 
