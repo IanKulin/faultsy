@@ -137,6 +137,18 @@ The value must match `RESULT_TOKEN` in your `.env`. The endpoint returns:
 | `404` | Hostname not registered (site hasn't loaded `faultsy.js` yet) |
 | `401` | Wrong or missing token |
 
+## Notifications
+
+Faultsy can send push notifications via [ntfy.sh](https://ntfy.sh) when errors are detected. Configure this from the **Notifications** page in the dashboard.
+
+| Setting | Description |
+|---|---|
+| Enable notifications | Toggle ntfy.sh alerts on or off |
+| Channel | Your ntfy.sh topic name (e.g. for `ntfy.sh/myalerts`, enter `myalerts`) |
+| Cooldown | Minimum minutes between alerts per site. `0` = notify on every error. Max 10080 (1 week). |
+
+A **Send test notification** button is available once a channel is configured. Notifications are sent fire-and-forget and do not block error ingestion.
+
 ## AI Disclosure
 
 AI tools where used in the production of this software
