@@ -11,6 +11,14 @@ A self-hosted browser error collector. Faultsy catches unhandled JavaScript erro
 
 Data older than 48 hours is purged automatically. Sites that haven't loaded the script in over a year are removed.
 
+## Security model
+
+Faultsy validates error submissions against a domain whitelist and checks the `Origin` header sent by browsers. Browsers enforce `Origin` and JavaScript cannot override it, so this reliably identifies which site is sending errors.
+
+However, `Origin` can be set to any value by a server-side script. Anyone who knows your Faultsy URL and a whitelisted hostname could inject fake errors. This is the same limitation that applies to all client-side error collectors (including Sentry) — there is no way to authenticate a browser without embedding a secret in the page, and any secret in client-side JavaScript is effectively public.
+
+The practical risk is low: an attacker can pollute your error log and trigger spurious alerts, but cannot read data or affect anything outside Faultsy. Rate limiting (30 req/min per IP) constrains bulk injection.
+
 ## Adding monitoring to your site
 
 Add this to every page you want to monitor, ideally in `<head>`:
@@ -151,7 +159,7 @@ A **Send test notification** button is available once a channel is configured. N
 
 ## AI Disclosure
 
-AI tools where used in the production of this software
+AI tools were used in the production of this software
 
 ## License
 
