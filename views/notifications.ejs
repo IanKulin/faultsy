@@ -1,0 +1,63 @@
+<%- include('partials/header', { title: 'Notifications — Faultsy' }) %>
+<div class="top-bar">
+  <h1>Notifications</h1>
+  <a href="/">Dashboard</a>
+  <form class="inline" method="POST" action="/logout">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="logout" type="submit">Logout</button>
+  </form>
+</div>
+
+<% if (saved) { %>
+  <p class="flash-success">Settings saved.</p>
+<% } %>
+<% if (tested) { %>
+  <p class="flash-success">Test notification sent.</p>
+<% } %>
+<% if (error === 'missing_channel') { %>
+  <p class="flash-error">A channel name is required when notifications are enabled.</p>
+<% } else if (error === 'invalid_channel') { %>
+  <p class="flash-error">Invalid channel name. Use a simple topic string (no <code>/</code> or <code>?</code>).</p>
+<% } else if (error === 'invalid_cooldown') { %>
+  <p class="flash-error">Cooldown must be a whole number between 0 and 10080.</p>
+<% } else if (error === 'test_failed') { %>
+  <p class="flash-error">Test notification failed. Check your channel name and try again.</p>
+<% } %>
+
+<div class="settings-panel">
+  <form method="POST" action="/notifications/save">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <h2 class="settings-heading">ntfy.sh</h2>
+
+    <div class="field checkbox-field">
+      <label>
+        <input type="checkbox" name="ntfy_enabled" value="true" <%= ntfy_enabled ? 'checked' : '' %>>
+        Enable ntfy.sh notifications
+      </label>
+    </div>
+
+    <div class="field">
+      <label for="ntfy_channel">Channel</label>
+      <input id="ntfy_channel" type="text" name="ntfy_channel" value="<%= ntfy_channel %>" placeholder="my_faultsy_alerts">
+      <small>The topic name from your ntfy.sh URL — e.g. <code>ntfy.sh/my_faultsy_alerts</code> → enter <code>my_faultsy_alerts</code></small>
+    </div>
+
+    <div class="field">
+      <label for="ntfy_cooldown">Cooldown (minutes)</label>
+      <input id="ntfy_cooldown" class="input-narrow" type="number" name="ntfy_cooldown_minutes" value="<%= ntfy_cooldown_minutes %>" min="0" step="1">
+      <small>Minimum minutes between notifications per site. Set to <code>0</code> to notify on every error.</small>
+    </div>
+
+    <button class="btn-save" type="submit">Save</button>
+  </form>
+
+  <% if (ntfy_enabled && ntfy_channel) { %>
+    <form class="test-form" method="POST" action="/notifications/test">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button type="submit">Send test notification</button>
+    </form>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

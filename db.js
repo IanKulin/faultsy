@@ -34,7 +34,26 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS whitelist (
     hostname TEXT PRIMARY KEY
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
+
+try {
+  db.exec('ALTER TABLE sites ADD COLUMN last_notified TEXT');
+} catch (e) {
+  if (!e.message.includes('duplicate column name')) throw e;
+}
+
+const defaultSettings = [
+  ['ntfy_enabled', 'false'],
+  ['ntfy_channel', ''],
+  ['ntfy_cooldown_minutes', '15'],
+];
+const insertDefaultSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+for (const [key, value] of defaultSettings) insertDefaultSetting.run(key, value);
 
 const stmts = {
   upsertSite:       db.prepare(`
@@ -79,6 +98,9 @@ const stmts = {
   `),
   siteErrors:       db.prepare('SELECT message, url, ts FROM errors WHERE site = ? ORDER BY ts DESC LIMIT 100'),
   ping:             db.prepare('SELECT 1'),
+  getSetting:          db.prepare('SELECT value FROM settings WHERE key = ?'),
+  setSetting:          db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
+  updateLastNotified:  db.prepare('UPDATE sites SET last_notified = ? WHERE hostname = ?'),
   getWhitelist:        db.prepare('SELECT hostname FROM whitelist ORDER BY hostname'),
   addToWhitelist:      db.prepare('INSERT OR IGNORE INTO whitelist(hostname) VALUES(?)'),
   removeFromWhitelist: db.prepare('DELETE FROM whitelist WHERE hostname = ?'),
@@ -137,5 +159,9 @@ export function dbIsWhitelisted(hostname) { return stmts.isWhitelisted.get(hostn
 export const dbMigrateWhitelist = db.transaction((entries) => {
   for (const hostname of entries) stmts.addToWhitelist.run(hostname);
 });
+
+export function dbGetSetting(key) { return stmts.getSetting.get(key)?.value; }
+export function dbSetSetting(key, value) { stmts.setSetting.run(key, value); }
+export function dbUpdateSiteLastNotified(hostname) { stmts.updateLastNotified.run(new Date().toISOString(), hostname); }
 
 export function dbClose() { db.close(); }

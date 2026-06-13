@@ -11,12 +11,22 @@ form.inline { display: inline; }
 button.logout { background: none; border: none; color: #0066cc; cursor: pointer; font-size: 0.9rem; padding: 0; text-decoration: underline; }
 .login-wrap { max-width: 320px; margin: 4rem auto; }
 .login-wrap h1 { font-size: 1.3rem; margin-bottom: 1.25rem; }
-.field { margin-bottom: 0.85rem; }
+.field { margin-bottom: 1.1rem; }
 .field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
-.field input { width: 100%; padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 3px; font-size: 0.95rem; }
+.field input:not([type="checkbox"]) { width: 100%; padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 3px; font-size: 0.95rem; }
+.field small { display: block; margin-top: 0.35rem; color: #555; font-size: 0.8rem; line-height: 1.4; }
 .btn { width: 100%; padding: 0.55rem; background: #0066cc; color: #fff; border: none; border-radius: 3px; font-size: 1rem; cursor: pointer; }
 .btn:hover { background: #0055b3; }
 .error-msg { color: #c0392b; font-size: 0.85rem; margin-bottom: 0.85rem; }
 .breadcrumb { margin-bottom: 1.25rem; font-size: 0.9rem; }
 .empty { color: #666; font-size: 0.9rem; margin-top: 1rem; }
 td.truncate { max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-panel { max-width: 480px; }
+.settings-heading { font-size: 1rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 1.25rem; }
+.checkbox-field label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; font-weight: normal; cursor: pointer; }
+.input-narrow { width: 100px !important; }
+.btn-save { padding: 0.45rem 1.1rem; background: #0066cc; color: #fff; border: none; border-radius: 3px; font-size: 0.9rem; cursor: pointer; margin-top: 0.25rem; }
+.btn-save:hover { background: #0055b3; }
+.test-form { margin-top: 1.25rem; }
+.test-form button { background: none; border: 1px solid #ccc; border-radius: 3px; padding: 0.4rem 0.9rem; font-size: 0.85rem; cursor: pointer; color: #333; }
+.test-form button:hover { background: #f5f5f5; }

@@ -19,7 +19,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Private-Network': 'true',
 };
 
-export default function errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, logger }) {
+export default function errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, maybeNotify, logger }) {
   const router = express.Router();
 
   router.options('/', (req, res) => {
@@ -68,6 +68,7 @@ export default function errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, 
     }
 
     dbInsertError(hostname, message, url);
+    maybeNotify(hostname);
     logger.debug('[%s] Error recorded for %s', reqId, hostname);
     res.sendStatus(204);
   });

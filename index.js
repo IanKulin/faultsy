@@ -10,7 +10,7 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import csrfProtection from 'small-csrf';
 import Logger from '@iankulin/logger';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors, dbHealthCheck, dbGetWhitelist, dbAddToWhitelist, dbRemoveFromWhitelist, dbGetWhitelistCount, dbIsWhitelisted, dbMigrateWhitelist } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors, dbHealthCheck, dbGetWhitelist, dbAddToWhitelist, dbRemoveFromWhitelist, dbGetWhitelistCount, dbIsWhitelisted, dbMigrateWhitelist, dbGetSetting, dbSetSetting, dbUpdateSiteLastNotified } from './db.js';
 import { SqliteSessionStore } from './session-store.js';
 import snippetRouter from './routes/snippet.js';
 import errorsRouter from './routes/errors.js';
@@ -18,6 +18,8 @@ import resultRouter from './routes/result.js';
 import authRouter from './routes/auth.js';
 import dashboardRouter from './routes/dashboard.js';
 import whitelistRouter from './routes/whitelist.js';
+import notificationsRouter from './routes/notifications.js';
+import { createNotifier } from './lib/notify.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -164,8 +166,10 @@ const csrf = csrfProtection({ secret: DASHBOARD_SESSION_SECRET });
 app.use(authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH, csrf }));
 app.use(dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite, csrf }));
 app.use(whitelistRouter({ dbGetWhitelist, dbAddToWhitelist, dbRemoveFromWhitelist, dbGetWhitelistCount, csrf }));
+app.use(notificationsRouter({ dbGetSetting, dbSetSetting, csrf }));
 app.use(snippetRouter({ SERVER_URL, isWhitelisted, dbUpsertSite, logger }));
-app.use('/api/errors', errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, logger }));
+const maybeNotify = createNotifier({ dbGetSetting, dbGetSite, dbUpdateSiteLastNotified, logger });
+app.use('/api/errors', errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, maybeNotify, logger }));
 app.use('/api/result', resultRouter({ RESULT_TOKEN, dbGetSiteErrorCount, logger }));
 
 // Temporary compat redirects — remove once cached snippets pointing to /errors are unlikely
