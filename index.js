@@ -194,6 +194,14 @@ const server = app.listen(PORT, () => {
   timer.unref();
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    logger.error('Port %s is already in use. Is another instance of Faultsy running?', PORT);
+    process.exit(1);
+  }
+  throw err;
+});
+
 let shuttingDown = false;
 function shutdown() {
   if (shuttingDown) return;
