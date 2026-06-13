@@ -1,0 +1,57 @@
+<%- include('partials/header', { title: 'Whitelist — Faultsy' }) %>
+<div class="top-bar">
+  <h1>Whitelist</h1>
+  <a href="/">Dashboard</a>
+  <form class="inline" method="POST" action="/logout">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="logout" type="submit">Logout</button>
+  </form>
+</div>
+
+<% if (added) { %>
+  <p class="flash-success">Added <strong><%= added %></strong>.</p>
+<% } %>
+<% if (removed) { %>
+  <p class="flash-success">Removed <strong><%= removed %></strong>.</p>
+<% } %>
+<% if (error === 'last_entry') { %>
+  <p class="flash-error">Cannot remove the last whitelisted hostname.</p>
+<% } else if (error === 'invalid') { %>
+  <p class="flash-error">Invalid hostname.</p>
+<% } %>
+
+<form method="POST" action="/whitelist/add">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <label>
+    Add hostname
+    <input type="text" name="hostname" placeholder="example.com" required>
+  </label>
+  <button type="submit">Add</button>
+</form>
+
+<% if (entries.length > 0) { %>
+  <table>
+    <thead>
+      <tr><th>Hostname</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      <% for (const e of entries) { %>
+        <tr>
+          <td><%= e.hostname %></td>
+          <td>
+            <form class="inline" method="POST" action="/whitelist/delete">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="hostname" value="<%= e.hostname %>">
+              <button type="submit"
+                <% if (entries.length === 1) { %>disabled title="Cannot remove the last whitelisted hostname"<% } %>>
+                Remove
+              </button>
+            </form>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+<% } %>
+
+<%- include('partials/footer') %>

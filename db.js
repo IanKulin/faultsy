@@ -30,6 +30,10 @@ db.exec(`
     last_seen     TEXT NOT NULL,
     snippet_hits  INTEGER NOT NULL DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS whitelist (
+    hostname TEXT PRIMARY KEY
+  );
 `);
 
 const stmts = {
@@ -75,6 +79,11 @@ const stmts = {
   `),
   siteErrors:       db.prepare('SELECT message, url, ts FROM errors WHERE site = ? ORDER BY ts DESC LIMIT 100'),
   ping:             db.prepare('SELECT 1'),
+  getWhitelist:        db.prepare('SELECT hostname FROM whitelist ORDER BY hostname'),
+  addToWhitelist:      db.prepare('INSERT OR IGNORE INTO whitelist(hostname) VALUES(?)'),
+  removeFromWhitelist: db.prepare('DELETE FROM whitelist WHERE hostname = ?'),
+  getWhitelistCount:   db.prepare('SELECT COUNT(*) as count FROM whitelist'),
+  isWhitelisted:       db.prepare('SELECT 1 FROM whitelist WHERE lower(hostname) = lower(?) LIMIT 1'),
 };
 
 export function oneYearAgoCutoff() {
@@ -119,5 +128,14 @@ export function dbGetSiteErrors(hostname) {
 }
 
 export function dbHealthCheck() { stmts.ping.get(); }
+
+export function dbGetWhitelist() { return stmts.getWhitelist.all(); }
+export function dbAddToWhitelist(hostname) { stmts.addToWhitelist.run(hostname); }
+export function dbRemoveFromWhitelist(hostname) { stmts.removeFromWhitelist.run(hostname); }
+export function dbGetWhitelistCount() { return stmts.getWhitelistCount.get().count; }
+export function dbIsWhitelisted(hostname) { return stmts.isWhitelisted.get(hostname); }
+export const dbMigrateWhitelist = db.transaction((entries) => {
+  for (const hostname of entries) stmts.addToWhitelist.run(hostname);
+});
 
 export function dbClose() { db.close(); }

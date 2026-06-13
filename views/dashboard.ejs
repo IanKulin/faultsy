@@ -1,6 +1,7 @@
 <%- include('partials/header', { title: 'Faultsy' }) %>
 <div class="top-bar">
   <h1>Faultsy</h1>
+  <a href="/whitelist">Whitelist</a>
   <form class="inline" method="POST" action="/logout">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <button class="logout" type="submit">Logout</button>

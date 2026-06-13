@@ -10,13 +10,14 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import csrfProtection from 'small-csrf';
 import Logger from '@iankulin/logger';
-import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors, dbHealthCheck } from './db.js';
+import { dbUpsertSite, dbGetSite, dbInsertError, dbGetSiteErrorCount, dbPurgeOldData, dbClose, oneYearAgoCutoff, dbGetAllSitesSummary, dbGetSiteErrors, dbHealthCheck, dbGetWhitelist, dbAddToWhitelist, dbRemoveFromWhitelist, dbGetWhitelistCount, dbIsWhitelisted, dbMigrateWhitelist } from './db.js';
 import { SqliteSessionStore } from './session-store.js';
 import snippetRouter from './routes/snippet.js';
 import errorsRouter from './routes/errors.js';
 import resultRouter from './routes/result.js';
 import authRouter from './routes/auth.js';
 import dashboardRouter from './routes/dashboard.js';
+import whitelistRouter from './routes/whitelist.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -27,32 +28,36 @@ const logger = new Logger({
 });
 
 const WHITELIST_PATH = process.env.WHITELIST_PATH ?? 'data/whitelist.json';
-let whitelist;
-try {
-  whitelist = JSON.parse(readFileSync(WHITELIST_PATH, 'utf8'));
-} catch (e) {
-  if (e.code === 'ENOENT') {
-    logger.error('%s not found', WHITELIST_PATH);
-  } else {
-    logger.error('%s is not valid JSON: %s', WHITELIST_PATH, e.message);
-  }
-  process.exit(1);
-}
-if (!Array.isArray(whitelist) || whitelist.length === 0) {
-  logger.error('%s must be a non-empty array', WHITELIST_PATH);
-  process.exit(1);
-}
-const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
-for (const entry of whitelist) {
-  if (typeof entry !== 'string' || !HOSTNAME_RE.test(entry)) {
-    logger.error('Invalid whitelist entry: %j — must be a plain hostname (e.g. "example.com")', entry);
+if (dbGetWhitelistCount() === 0) {
+  let entries;
+  try {
+    entries = JSON.parse(readFileSync(WHITELIST_PATH, 'utf8'));
+  } catch (e) {
+    if (e.code === 'ENOENT') {
+      logger.error('%s not found', WHITELIST_PATH);
+    } else {
+      logger.error('%s is not valid JSON: %s', WHITELIST_PATH, e.message);
+    }
     process.exit(1);
   }
+  if (!Array.isArray(entries) || entries.length === 0) {
+    logger.error('%s must be a non-empty array', WHITELIST_PATH);
+    process.exit(1);
+  }
+  const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+  for (const entry of entries) {
+    if (typeof entry !== 'string' || !HOSTNAME_RE.test(entry)) {
+      logger.error('Invalid whitelist entry: %j — must be a plain hostname (e.g. "example.com")', entry);
+      process.exit(1);
+    }
+  }
+  dbMigrateWhitelist(entries);
+  logger.info('Whitelist migrated from %s: %d domain(s)', WHITELIST_PATH, entries.length);
+} else {
+  logger.info('Whitelist loaded from DB: %d domain(s)', dbGetWhitelistCount());
 }
-logger.info('Whitelist loaded: %d domain(s)', whitelist.length);
 
-const whitelistSet = new Set(whitelist.map(d => d.toLowerCase()));
-const isWhitelisted = hostname => whitelistSet.has(hostname.toLowerCase());
+const isWhitelisted = hostname => !!dbIsWhitelisted(hostname);
 
 const SERVER_URL = process.env.SERVER_URL;
 if (!SERVER_URL) {
@@ -158,6 +163,7 @@ const csrf = csrfProtection({ secret: DASHBOARD_SESSION_SECRET });
 
 app.use(authRouter({ DASHBOARD_USER, DASHBOARD_PASSWORD_HASH, csrf }));
 app.use(dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors, dbGetSite, csrf }));
+app.use(whitelistRouter({ dbGetWhitelist, dbAddToWhitelist, dbRemoveFromWhitelist, dbGetWhitelistCount, csrf }));
 app.use(snippetRouter({ SERVER_URL, isWhitelisted, dbUpsertSite, logger }));
 app.use('/api/errors', errorsRouter({ isWhitelisted, dbGetSite, dbInsertError, oneYearAgoCutoff, logger }));
 app.use('/api/result', resultRouter({ RESULT_TOKEN, dbGetSiteErrorCount, logger }));
