@@ -1,0 +1,22 @@
+*, *::before, *::after { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #111; margin: 0; padding: 1.5rem; }
+h1 { margin: 0 0 1.25rem; font-size: 1.4rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { border: 1px solid #ddd; padding: 0.45rem 0.75rem; text-align: left; vertical-align: top; }
+th { background: #f5f5f5; font-weight: 600; }
+a { color: #0066cc; }
+.top-bar { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.25rem; }
+.top-bar h1 { margin: 0; }
+form.inline { display: inline; }
+button.logout { background: none; border: none; color: #0066cc; cursor: pointer; font-size: 0.9rem; padding: 0; text-decoration: underline; }
+.login-wrap { max-width: 320px; margin: 4rem auto; }
+.login-wrap h1 { font-size: 1.3rem; margin-bottom: 1.25rem; }
+.field { margin-bottom: 0.85rem; }
+.field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+.field input { width: 100%; padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 3px; font-size: 0.95rem; }
+.btn { width: 100%; padding: 0.55rem; background: #0066cc; color: #fff; border: none; border-radius: 3px; font-size: 1rem; cursor: pointer; }
+.btn:hover { background: #0055b3; }
+.error-msg { color: #c0392b; font-size: 0.85rem; margin-bottom: 0.85rem; }
+.breadcrumb { margin-bottom: 1.25rem; font-size: 0.9rem; }
+.empty { color: #666; font-size: 0.9rem; margin-top: 1rem; }
+td.truncate { max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

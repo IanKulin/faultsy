@@ -1,0 +1,25 @@
+<%- include('partials/header', { title: site.hostname + ' — Faultsy' }) %>
+<p class="breadcrumb"><a href="/">← Dashboard</a></p>
+<h1><%= site.hostname %></h1>
+<p class="meta">Last seen: <%- formatTs(site.last_seen) %> &nbsp;·&nbsp; Snippet hits: <%= site.snippet_hits %></p>
+<% if (errors.length === 0) { %>
+  <p class="empty">No errors recorded in the last 48 hours.</p>
+<% } else { %>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Message</th><th>URL</th></tr>
+    </thead>
+    <tbody>
+      <% for (const e of errors) { %>
+        <tr>
+          <td><%- formatTs(e.ts) %></td>
+          <td class="truncate" title="<%= e.message %>"><%= e.message %></td>
+          <td class="truncate" title="<%= e.url %>">
+            <a href="<%= e.url %>" target="_blank" rel="noopener noreferrer"><%= e.url %></a>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+<% } %>
+<%- include('partials/footer') %>

@@ -82,6 +82,14 @@ const PORT = process.env.PORT ?? 3000;
 
 const app = express();
 
+app.set('view engine', 'ejs');
+app.set('views', join(__dirname, 'views'));
+app.locals.formatTs = (ts) => {
+  if (!ts) return '';
+  const iso = new Date(ts).toISOString();
+  return `<time datetime="${iso}">${iso}</time>`;
+};
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 const trustProxy = process.env.TRUST_PROXY;

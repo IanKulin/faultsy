@@ -1,0 +1,20 @@
+<%- include('partials/header', { title: 'Login — Faultsy' }) %>
+<div class="login-wrap">
+  <h1>Faultsy</h1>
+  <% if (errorMsg) { %>
+    <p class="error-msg"><%= errorMsg %></p>
+  <% } %>
+  <form method="POST" action="/login">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="field">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn" type="submit">Sign in</button>
+  </form>
+</div>
+<%- include('partials/footer') %>
