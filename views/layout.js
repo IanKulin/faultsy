@@ -31,6 +31,13 @@ export function layout(title, bodyHtml) {
   </style>
 </head>
 <body>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('time[datetime]').forEach(el => {
+      el.textContent = new Date(el.getAttribute('datetime')).toLocaleString();
+    });
+  });
+</script>
 ${bodyHtml}
 </body>
 </html>`;

@@ -24,13 +24,13 @@ export default function dashboardRouter({ dbGetAllSitesSummary, dbGetSiteErrors,
 function renderDashboard(sites, csrfToken) {
   const rows = sites.map(s => {
     const lastErrorHtml = s.last_error_message
-      ? `${escHtml(s.last_error_message.slice(0, 80))}${s.last_error_message.length > 80 ? '…' : ''}<br><small>${escHtml(formatTs(s.last_error_ts))}</small>`
+      ? `${escHtml(s.last_error_message.slice(0, 80))}${s.last_error_message.length > 80 ? '…' : ''}<br><small>${formatTs(s.last_error_ts)}</small>`
       : '';
     return `<tr>
       <td><a href="/site/${escHtml(s.hostname)}">${escHtml(s.hostname)}</a></td>
       <td>${s.error_count}</td>
       <td>${lastErrorHtml}</td>
-      <td>${escHtml(formatTs(s.last_seen))}</td>
+      <td>${formatTs(s.last_seen)}</td>
       <td>${s.snippet_hits}</td>
     </tr>`;
   }).join('\n');
@@ -57,7 +57,7 @@ function renderDashboard(sites, csrfToken) {
 function renderSiteDetail(site, errors) {
   const { hostname } = site;
   const rows = errors.map(e => `<tr>
-    <td>${escHtml(formatTs(e.ts))}</td>
+    <td>${formatTs(e.ts)}</td>
     <td class="truncate" title="${escHtml(e.message)}">${escHtml(e.message)}</td>
     <td class="truncate" title="${escHtml(e.url)}"><a href="${escHtml(e.url)}" target="_blank" rel="noopener noreferrer">${escHtml(e.url)}</a></td>
   </tr>`).join('\n');
@@ -72,12 +72,13 @@ function renderSiteDetail(site, errors) {
   return layout(`${hostname} — Faultsy`, `
     <p class="breadcrumb"><a href="/">← Dashboard</a></p>
     <h1>${escHtml(hostname)}</h1>
-    <p class="meta">Last seen: ${escHtml(formatTs(site.last_seen))} &nbsp;·&nbsp; Snippet hits: ${site.snippet_hits}</p>
+    <p class="meta">Last seen: ${formatTs(site.last_seen)} &nbsp;·&nbsp; Snippet hits: ${site.snippet_hits}</p>
     ${tableHtml}
   `);
 }
 
 function formatTs(ts) {
   if (!ts) return '';
-  return new Date(ts).toLocaleString();
+  const iso = new Date(ts).toISOString();
+  return `<time datetime="${iso}">${iso}</time>`;
 }
